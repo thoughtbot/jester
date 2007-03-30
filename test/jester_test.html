@@ -1,0 +1,239 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">  
+    <title>jester.js</title>
+    <script language="JavaScript" type="text/javascript" src="jsunit/app/jsUnitCore.js"></script>
+    <script language="JavaScript" type="text/javascript" src="../prototype.js"></script>
+    <script language="JavaScript" type="text/javascript" src="../ObjTree.js"></script>
+    <script language="JavaScript" type="text/javascript" src="../jester.js"></script>
+  </head>
+
+  <body>
+    <script language="JavaScript" type="text/javascript">
+
+default_prefix = function() {return "http://" + window.location.hostname + (window.location.port ? ":" + window.location.port : "");}
+    
+function testShouldGenerateAndStoreTheGivenClassNamesSingularAndPluralVersionsAndUseTheCurrentUrlAsTheUrlPrefixWhenConstructingABaseObject () {
+  var user = new Base('User');
+  assertEquals('User', user._name);
+	assertEquals('user', user._singular);
+	assertEquals('users', user._plural);
+	assertEquals(default_prefix(), user._prefix);
+	assert(user.errors.length == 0);
+}
+      
+function testShouldUseTheGivenUrlPrefixWhenConstructingABaseObject () {
+  var user = new Base('User', 'http://www.thoughtbot.com');
+  assertEquals('http://www.thoughtbot.com', user._prefix);
+
+  var user = new Base('User', 'public/forum');
+  assertEquals(default_prefix() + '/public/forum', user._prefix);
+
+  var user = new Base('User', '/public/forum');
+  assertEquals(default_prefix() + '/public/forum', user._prefix);
+}
+
+function testShouldUseTheGivenSingularAndPluralClassNamesWhenConstructingABaseObject () {
+  var person = new Base('Person', null, 'person');
+  assertEquals('person', person._singular);
+  assertEquals('persons', person._plural);
+
+  var person = new Base('Person', null, 'person', 'people');
+  assertEquals('person', person._singular);
+  assertEquals('people', person._plural);
+}
+
+function testShouldReturnTheSingularUrlWhenSentSingularUrl () {
+  var user = new Base('User', 'http://www.thoughtbot.com');
+  user.id = 1;
+  assertEquals('http://www.thoughtbot.com/users/1.xml', user.singular_url());
+}
+
+function testShouldReturnThePluralUrlWhenSentPluralUrl () {
+  var user = new Base('User', 'http://www.thoughtbot.com');
+  assertEquals('http://www.thoughtbot.com/users.xml', user.plural_url());
+}
+
+function testShouldSayAGivenObjectIsNewIfItDoesNotHaveAnIdWhenSentNewRecord () {
+  var user = new Base('User');
+  assert(user.new_record());
+
+  var user = new Base('User');
+  user.id = 1
+  assert(! user.new_record());
+}
+
+function testShouldSayTheGivenObjectIsValidIfItDoesNotHaveAnyErrorsWhenSentValid () {
+  var User = new Base('User');
+  var user = User.build();
+  
+  assert(user.valid());
+  user.errors[0] = 'error'
+  assert(! user.valid());
+}
+
+function testShouldFindTheRecordWithTheGivenIdWhenSentFind () {
+  var User = new Base('User', 'http://www.thoughtbot.com');
+  User._tree = { parseHTTP : 
+    function (url, options, callback) {
+      return { 
+        'user' : {
+          'id' : { '@type' : 'integer', '#text' : '1' },
+            'first-name' : 'eric',
+          'admin' : { '@type' : 'boolean', '#text' : 'true' },
+          'posts' : { 
+            'post' : [{ 'id' : { '@type' : 'integer', '#text' : '1' }, 'title' : 'the title', 'body' : 'the body' },
+                    { 'id' : { '@type' : 'integer', '#text' : '2' }, 'title' : 'another title', 'body' : 'another body' }]
+          }
+        }
+      }
+    }
+  }
+
+	var eric = User.find(1);
+	assertEquals('User', eric._name)
+	assertEquals('user', eric._singular);
+	assertEquals('users', eric._plural);
+	assertEquals('http://www.thoughtbot.com', eric._prefix);
+	assertEquals(1, eric.id);
+	assertEquals('eric', eric.first_name);
+	assert(eric.admin);
+
+	assertEquals(2, eric.posts.length);
+	assertEquals(1, eric.posts[0].id);
+	assertEquals('the title', eric.posts[0].title);
+	assertEquals('the body', eric.posts[0].body);
+	assertEquals('another title', eric.posts[1].title);
+	assertEquals('another body', eric.posts[1].body);
+}
+
+function testShouldSetTheObjectsAttributesToTheGivenAttributesWhenSentSetAttributes () {
+  var user = new Base('User');
+	assertUndefined(user.first_name);
+
+	user.setAttributes({ 'first_name' : 'eric' });
+	assertEquals('eric', user.first_name);
+	assertEquals(1, user.attributes.length);
+	assertEquals('first_name', user.attributes[0]);
+}
+
+function testShouldSeeTheObjectsErrorsFromTheGivenErrorsElementsWhenMadeFromTree () {
+	var User = new Base('User');
+	
+	var errorTree = { 'error' : ["Name can't be blank", "City can't be blank"] }
+	var errors = User.errorsFromTree(errorTree);
+	assertEquals(2, errors.length);
+	assertEquals("Name can't be blank", errors[0]);
+	assertEquals("City can't be blank", errors[1]);
+}*/
+
+function testShouldSetTheObjectsErrorsWithTheGivenArrayOfErrorsWhenSentSetErrors () {
+  var errors = { 'error' : ["Name can't be blank", "City can't be blank"] }
+
+	var user = new Base('User');
+	assertEquals(0, user.errors.length);
+
+	user.setErrors(errors);
+	assert(!user.valid());
+	assertEquals(3, user.errors.length);
+	assertEquals(1, user.errors[0]);
+	assertEquals(2, user.errors[1]);
+	assertEquals(3, user.errors[2]);
+}
+
+function testShouldDestroyItselfWhenSentDestroy () {
+  var user = new Base('User');
+	user.id = 1
+	Ajax = { Request : function (url, options) { 
+	    this.transport = { status : 200 };
+	  }
+	}
+	assertEquals(user, user.destroy());
+	assertNull(user.id);
+
+  var user = new Base('User');
+	user.id = 1
+	Ajax = { Request : function (url, options) { 
+	    this.transport = { status : 500 };
+	  }
+	}
+	assert(! user.destroy());
+	assertEquals(1, user.id);
+}
+
+function testShouldCreateANewRecordIfItsANewObjectWhenSentSave () {
+  var user = new Base('User');
+  user.setAttributes({ 'first_name' : 'eric' });
+  assert(user.new_record());
+
+  Ajax = { Request : function (url, options) {
+    this.transport = { status : 201 };
+    this.getHeader = function (header) {
+      return 'http://www.thoughtbot.com/users/1';
+    }
+  }}
+
+	assert(user.save());
+	assertEquals(1, user.id);
+}
+
+function testShouldUpdateAnExistingRecordIfItsAnExistingObjectWhenSentSave () {
+  var user = new Base('User');
+	user.setAttributes({ 'id' : '1', 'first_name' : 'eric' });
+	assert(! user.new_record());
+
+	Ajax = { Request : function (url, options) {
+	  this.transport = { status : 200 };
+	  this.getHeader = function (header) {
+	    return 'http://www.thoughtbot.com/users/1';
+	  }
+	}}
+
+	assert(user.save());
+}
+
+function testShouldFillItsErrorsCollectionIfItsInvalidWhenSentSave() {
+  var user = new Base('User');
+  user.setAttributes({ 'first_name' : '' });
+  assert(user.new_record());
+
+  Ajax = { Request : function (url, options) {
+	  this.transport = { status : 200,
+	    responseText : "<errors><error>First name can't be blank</error></errors>",
+	  };
+	  this.getHeader = function (header) {
+	    return 'http://www.thoughtbot.com/users/1';
+	  }
+	}}
+
+	assert(! user.save());
+	assert(! user.valid());
+	assertEquals(1, user.errors.length);
+	assertEquals("First name can't be blank", user.errors[0]);
+
+  var user = new Base('User');
+	user.setAttributes({ 'id' : '1', 'first_name' : '' });
+	assert(! user.new_record());
+
+	Ajax = { Request : function (url, options) {
+	  this.transport = { status : 200,
+	    responseText : "<errors><error>First name can't be blank</error></errors>",
+	  };
+	  this.getHeader = function (header) {
+	    return 'http://www.thoughtbot.com/users/1';
+	  }
+  }}
+
+	assert(! user.save());
+	assert(! user.valid());
+	assertEquals(1, user.errors.length);
+	assertEquals("First name can't be blank", user.errors[0]);
+}
+
+    </script>
+  </body>
+</html>
+
