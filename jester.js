@@ -44,6 +44,9 @@ function Base(name, prefix, singular, plural) {
   this.errors = [];
 }
 
+// creation helper
+Base.model = function(name, prefix, singular, plural) {eval(name + ' = new Base("' + [name, prefix, singular, plural].join('", "') + '");');};
+
 // helper URLs
 Base.prototype.singular_url = function() {return (this.id ? this._prefix + "/" + this._plural + "/" + this.id + ".xml" : "");}
 Base.prototype.plural_url = function() {return this._prefix + "/" + this._plural + ".xml";}
