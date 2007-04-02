@@ -55,7 +55,7 @@ function Base(name, prefix, singular, plural) {
 }
 
 // Model declaration helper
-Base.model = function(name, prefix, singular, plural) {eval(name + ' = new Base("' + [name, prefix, singular, plural].join('", "') + '");');};
+Base.model = function(name, prefix, singular, plural) {eval(name + " = new Base(name, prefix, singular, plural);")}
 
 // helper URLs
 Base.prototype.singular_url = function() {return (this.id ? this._prefix + "/" + this._plural + "/" + this.id + ".xml" : "");}
