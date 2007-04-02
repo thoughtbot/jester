@@ -1,10 +1,27 @@
-// Jester::Base
-// The standard way of instantiating a Base class is:
-// var User = new Base("User")
-// This assumes "user" as a singular form, and "users" as a plural.
-// The URL prefix is presumed to be the current domain, appending the port if necessary.
-// So, if this being run at http://www.thoughtbot.com, the prefix will be "http://www.thoughtbot.com", and
-// if this is being run at http://localhost:3000, the prefix will be "http://localhost:3000".
+/*
+(c) 2007, thoughtbot, inc.
+
+Jester is a JavaScript implementation of REST, modeled after ActiveResource.
+
+More details can be found at:
+http://giantrobots.thoughtbot.com/2007/4/2/jester-javascriptian-rest
+
+*/
+
+
+
+/* The standard way of declaring a model is:
+   Base.model("User")
+   This assumes "user" as a singular form, and "users" as a plural.
+   Prefix rules: If no prefix given, default to the local domain
+     If prefix given, and prefix begins with "http:", take that as the entire prefix,
+        otherwise, treat it as a relative path and append it to the default prefix, adding a slash if necessary.
+     Example valid prefixes, assuming current domain is "www.thoughtbot.com:8080":
+       "http://www.google.com" => http://www.google.com
+       "" or null => http://www.thoughtbot.com:8080
+       "public/forum" => http://www.thoughtbot.com:8080/public/forum
+       "/public/forum" => http://www.thoughtbot.com:8080/public/forum
+*/
 function Base(name, prefix, singular, plural) {  
   this._name = name;
   
@@ -18,15 +35,7 @@ function Base(name, prefix, singular, plural) {
   else
     this._plural = this._singular + "s";
   
-  // Establish prefix.
-  // Rule: If no prefix given, default to the local domain
-  //       If prefix given, and prefix begins with "http:", take that as the entire prefix,
-  //                        otherwise, treat it as a relative path and append it to the default prefix, adding a slash if necessary.
-  // Example valid prefixes, assuming current domain is "www.thoughtbot.com:8080":
-  //   "http://www.google.com" => http://www.google.com
-  //   "" or null => http://www.thoughtbot.com:8080
-  //   "public/forum" => http://www.thoughtbot.com:8080/public/forum
-  //   "/public/forum" => http://www.thoughtbot.com:8080/public/forum
+  // Establish prefix
   default_prefix = function() {return "http://" + window.location.hostname + (window.location.port ? ":" + window.location.port : "");}
   if (prefix) {
     if (!prefix.match(/^http:/))
@@ -45,7 +54,7 @@ function Base(name, prefix, singular, plural) {
   this._tree.attr_prefix = "@";
 }
 
-// creation helper
+// Model declaration helper
 Base.model = function(name, prefix, singular, plural) {eval(name + ' = new Base("' + [name, prefix, singular, plural].join('", "') + '");');};
 
 // helper URLs
