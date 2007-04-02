@@ -5,10 +5,7 @@
 // The URL prefix is presumed to be the current domain, appending the port if necessary.
 // So, if this being run at http://www.thoughtbot.com, the prefix will be "http://www.thoughtbot.com", and
 // if this is being run at http://localhost:3000, the prefix will be "http://localhost:3000".
-function Base(name, prefix, singular, plural) {
-  this._tree = new XML.ObjTree();
-  this._tree.attr_prefix = "@";
-  
+function Base(name, prefix, singular, plural) {  
   this._name = name;
   
   if (singular)
@@ -42,6 +39,10 @@ function Base(name, prefix, singular, plural) {
   
   // Initialize with no errors
   this.errors = [];
+  
+  // Initialize XML tree once
+  this._tree = new XML.ObjTree();
+  this._tree.attr_prefix = "@";
 }
 
 // creation helper
@@ -55,7 +56,6 @@ Base.prototype.plural_url = function() {return this._prefix + "/" + this._plural
 Base.prototype.new_record = function() {return !(this.id);}
 // Valid helper
 Base.prototype.valid = function() {return ! this.errors.any();}
-
 
 // Find by ID
 Base.prototype.find = function(id) {  
@@ -120,7 +120,7 @@ Base.prototype.attributesFromTree = function(elements) {
       if (elements[attr]["@type"] == "integer")
         value = parseInt(value);
       else if (elements[attr]["@type"] == "boolean")
-        value = Boolean(value);
+        value = (value == "true");
       // else if (elements[attr].@type == "datetime")
       // how do I parse "2007-03-24T14:01:37-04:00" in JavaScript?
     }
