@@ -201,6 +201,10 @@ Base.prototype.destroy = function(given_id) {
 
 // Save (Create and Update)
 Base.prototype.save = function() {
+
+  // reset errors
+  this.setErrors([]);
+
   var url = null;
   var method = null;
   
@@ -265,9 +269,6 @@ Base.prototype.save = function() {
       }
     }
   }
-  
-  if (saved)
-    this.setErrors([]);
   
   // return whether the save succeeded
   return saved;
