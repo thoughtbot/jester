@@ -92,8 +92,19 @@ Base.prototype.valid = function() {return ! this.errors.any();}
 
 // Find by ID
 Base.prototype.find = function(id) {
-  var doc = this._tree.parseHTTP(this.singular_url(id), {});
-  return this.build(this.attributesFromTree(doc[this._singular]));
+
+  if (id == "all") {
+    var doc = this._tree.parseHTTP(this.plural_url(), {});
+    return doc[this._plural][this._singular].map(function(elem) {
+      return this.build(this.attributesFromTree(elem));
+    }.bind(this));
+  }
+  else {
+    if (isNaN(parseInt(id))) return null;
+    
+    var doc = this._tree.parseHTTP(this.singular_url(id), {});
+    return this.build(this.attributesFromTree(doc[this._singular]));
+  }
 };
 
 
@@ -131,7 +142,7 @@ Base.prototype.build = function(attributes, name, prefix, singular, plural) {
 // Create (New + Save)
 Base.prototype.create = function(attributes) {
   var base = this.build(attributes);
-  var saved = base.save();
+  base.save();
   
   return base;
 };

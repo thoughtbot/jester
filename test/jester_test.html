@@ -40,9 +40,6 @@ function setUp () {
     'id' : { '@type' : 'integer', '#text' : '3' },
     'first-name' : 'chad',
     'admin' : { '@type' : 'boolean', '#text' : 'true' },
-    'posts' : { 
-      'post' : []
-    }
   }
   
   allUsersDetails = {
@@ -150,7 +147,7 @@ function testShouldFindTheRecordWithTheGivenIdWhenSentFind () {
 	assertEquals('another body', eric.posts[1].body);
 }
 
-/*function testShouldFindAllRecordsWhenSentFindAll () {
+function testShouldFindAllRecordsWhenSentFindAll () {
   var User = new Base('User');
   User._tree = { parseHTTP :
     function (url, options, callback) {
@@ -161,17 +158,18 @@ function testShouldFindTheRecordWithTheGivenIdWhenSentFind () {
     }
   }
   
-  var users = User.find("all")
-  assertEqual(3, users.length)
+  var users = User.find("all");
+  assertEquals(3, users.length);
   
-  var eric = User.find(1)
-  assertEqual(eric.id, users[0].id)
-  assertEqual(eric.attributes, users[0].attributes)
-  assertEqual(eric.first_name, users[0].first_name)
-  assertEqual(eric.constructor, users[0].constructor)
-  
-  assertEqual([1, 2, 3], [users[0].id, users[1].id, users[2].id]) 
-}*/
+  var eric = User.find(1);
+  for (var i =0; i<eric.attributes.length; i++)
+    assertEquals(eric.attributes[i], users[0].attributes[i]);
+    
+  assertEquals(eric.first_name, users[0].first_name);
+  assertEquals(eric.constructor, users[0].constructor);
+  for (var i=0; i<3; i++)
+    assertEquals(i+1, users[i].id)
+}
 
 function testShouldSetTheObjectsAttributesToTheGivenAttributesWhenSentSetAttributes () {
   var eric = new Base('User');
