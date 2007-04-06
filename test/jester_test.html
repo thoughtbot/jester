@@ -15,35 +15,85 @@
     <script language="JavaScript" type="text/javascript">
 
 default_prefix = function() {return "http://" + window.location.hostname + (window.location.port ? ":" + window.location.port : "");}
+
+function setUp () {
+  postDetails1 = { 'id' : { '@type' : 'integer', '#text' : '1' }, 'title' : 'the title', 'body' : 'the body' }
+  postDetails2 = { 'id' : { '@type' : 'integer', '#text' : '2' }, 'title' : 'another title', 'body' : 'another body' }
+  postDetails3 = { 'id' : { '@type' : 'integer', '#text' : '2' }, 'title' : 'yet another title', 'body' : 'yet another body' }
+  ericDetails = {
+    'id' : { '@type' : 'integer', '#text' : '1' },
+    'first-name' : 'eric',
+    'admin' : { '@type' : 'boolean', '#text' : 'true' },
+    'posts' : { 
+      'post' : [postDetails1, postDetails2]
+    }
+  }
+  johnDetails = {
+    'id' : { '@type' : 'integer', '#text' : '2' },
+    'first-name' : 'john',
+    'admin' : { '@type' : 'boolean', '#text' : 'false' },
+    'posts' : { 
+      'post' : [postDetails3]
+    }
+  }
+  chadDetails = {
+    'id' : { '@type' : 'integer', '#text' : '3' },
+    'first-name' : 'chad',
+    'admin' : { '@type' : 'boolean', '#text' : 'true' },
+    'posts' : { 
+      'post' : []
+    }
+  }
+  
+  allUsersDetails = {
+    'users' : {
+      'user' : [ericDetails, johnDetails, chadDetails]
+    }
+  }
+  
+  allPostsDetails = {
+    'posts' : {
+      'post' : [postDetails1, postDetails2, postDetails3]
+    }
+  }  
+  
+  // test for belongs_to, separate from normal universe
+  postIncludeDetails = { 
+    'id' : { '@type' : 'integer', '#text' : '3' },
+    'title' : 'another title', 
+    'body' : 'another body',
+    'user' : ericDetails
+  }
+}
     
 function testShouldGenerateAndStoreTheGivenClassNamesSingularAndPluralVersionsAndUseTheCurrentUrlAsTheUrlPrefixWhenConstructingABaseObject () {
-  var user = new Base('User');
-  assertEquals('User', user._name);
-	assertEquals('user', user._singular);
-	assertEquals('users', user._plural);
-	assertEquals(default_prefix(), user._prefix);
-	assert(user.errors.length == 0);
+  var User = new Base('User');
+  assertEquals('User', User._name);
+	assertEquals('user', User._singular);
+	assertEquals('users', User._plural);
+	assertEquals(default_prefix(), User._prefix);
+	assert(User.errors.length == 0);
 }
       
 function testShouldUseTheGivenUrlPrefixWhenConstructingABaseObject () {
-  var user = new Base('User', 'http://www.thoughtbot.com');
-  assertEquals('http://www.thoughtbot.com', user._prefix);
+  var User = new Base('User', 'http://www.thoughtbot.com');
+  assertEquals('http://www.thoughtbot.com', User._prefix);
 
-  var user = new Base('User', 'public/forum');
-  assertEquals(default_prefix() + '/public/forum', user._prefix);
+  var User = new Base('User', 'public/forum');
+  assertEquals(default_prefix() + '/public/forum', User._prefix);
 
-  var user = new Base('User', '/public/forum');
-  assertEquals(default_prefix() + '/public/forum', user._prefix);
+  var User = new Base('User', '/public/forum');
+  assertEquals(default_prefix() + '/public/forum', User._prefix);
 }
 
 function testShouldUseTheGivenSingularAndPluralClassNamesWhenConstructingABaseObject () {
-  var person = new Base('Person', null, 'person');
-  assertEquals('person', person._singular);
-  assertEquals('persons', person._plural);
+  var Person = new Base('Person', null, 'person');
+  assertEquals('person', Person._singular);
+  assertEquals('persons', Person._plural);
 
-  var person = new Base('Person', null, 'person', 'people');
-  assertEquals('person', person._singular);
-  assertEquals('people', person._plural);
+  var Person = new Base('Person', null, 'person', 'people');
+  assertEquals('person', Person._singular);
+  assertEquals('people', Person._plural);
 }
 
 function testShouldReturnTheSingularUrlWhenSentSingularUrl () {
@@ -53,16 +103,15 @@ function testShouldReturnTheSingularUrlWhenSentSingularUrl () {
 }
 
 function testShouldReturnThePluralUrlWhenSentPluralUrl () {
-  var user = new Base('User', 'http://www.thoughtbot.com');
-  assertEquals('http://www.thoughtbot.com/users.xml', user.plural_url());
+  var User = new Base('User', 'http://www.thoughtbot.com');
+  assertEquals('http://www.thoughtbot.com/users.xml', User.plural_url());
 }
 
 function testShouldSayAGivenObjectIsNewIfItDoesNotHaveAnIdWhenSentNewRecord () {
   var user = new Base('User');
   assert(user.new_record());
-
-  var user = new Base('User');
-  user.id = 1
+  
+  user.id = 1;
   assert(! user.new_record());
 }
 
@@ -71,7 +120,7 @@ function testShouldSayTheGivenObjectIsValidIfItDoesNotHaveAnyErrorsWhenSentValid
   var user = User.build();
   
   assert(user.valid());
-  user.errors[0] = 'error'
+  user.errors[0] = 'error';
   assert(! user.valid());
 }
 
@@ -79,17 +128,8 @@ function testShouldFindTheRecordWithTheGivenIdWhenSentFind () {
   var User = new Base('User', 'http://www.thoughtbot.com');
   User._tree = { parseHTTP : 
     function (url, options, callback) {
-      return { 
-        'user' : {
-          'id' : { '@type' : 'integer', '#text' : '1' },
-            'first-name' : 'eric',
-          'admin' : { '@type' : 'boolean', '#text' : 'true' },
-          'posts' : { 
-            'post' : [{ 'id' : { '@type' : 'integer', '#text' : '1' }, 'title' : 'the title', 'body' : 'the body' },
-                    { 'id' : { '@type' : 'integer', '#text' : '2' }, 'title' : 'another title', 'body' : 'another body' }]
-          }
-        }
-      }
+      if (url == User.singular_url(1))
+        return {'user': ericDetails}
     }
   }
 
@@ -110,14 +150,37 @@ function testShouldFindTheRecordWithTheGivenIdWhenSentFind () {
 	assertEquals('another body', eric.posts[1].body);
 }
 
-function testShouldSetTheObjectsAttributesToTheGivenAttributesWhenSentSetAttributes () {
-  var user = new Base('User');
-	assertUndefined(user.first_name);
+/*function testShouldFindAllRecordsWhenSentFindAll () {
+  var User = new Base('User');
+  User._tree = { parseHTTP :
+    function (url, options, callback) {
+      if (url == User.plural_url())
+        return allUsersDetails;
+      else if (url == User.singular_url(1))
+        return {'user': ericDetails};
+    }
+  }
+  
+  var users = User.find("all")
+  assertEqual(3, users.length)
+  
+  var eric = User.find(1)
+  assertEqual(eric.id, users[0].id)
+  assertEqual(eric.attributes, users[0].attributes)
+  assertEqual(eric.first_name, users[0].first_name)
+  assertEqual(eric.constructor, users[0].constructor)
+  
+  assertEqual([1, 2, 3], [users[0].id, users[1].id, users[2].id]) 
+}*/
 
-	user.setAttributes({ 'first_name' : 'eric' });
-	assertEquals('eric', user.first_name);
-	assertEquals(1, user.attributes.length);
-	assertEquals('first_name', user.attributes[0]);
+function testShouldSetTheObjectsAttributesToTheGivenAttributesWhenSentSetAttributes () {
+  var eric = new Base('User');
+	assertUndefined(eric.first_name);
+
+	eric.setAttributes({ 'first_name' : 'eric' });
+	assertEquals('eric', eric.first_name);
+	assertEquals(1, eric.attributes.length);
+	assertEquals('first_name', eric.attributes[0]);
 }
 
 function testShouldSeeTheObjectsErrorsFromTheGivenErrorsElementsWhenMadeFromTree () {
@@ -125,23 +188,22 @@ function testShouldSeeTheObjectsErrorsFromTheGivenErrorsElementsWhenMadeFromTree
 	
 	var errorTree = { 'error' : ["Name can't be blank", "City can't be blank"] }
 	var errors = User.errorsFromTree(errorTree);
+	
 	assertEquals(2, errors.length);
 	assertEquals("Name can't be blank", errors[0]);
 	assertEquals("City can't be blank", errors[1]);
-}*/
+}
 
 function testShouldSetTheObjectsErrorsWithTheGivenArrayOfErrorsWhenSentSetErrors () {
-  var errors = { 'error' : ["Name can't be blank", "City can't be blank"] }
-
+  var errors = ["Name can't be blank", "City can't be blank"]
 	var user = new Base('User');
-	assertEquals(0, user.errors.length);
+  assert(user.valid());
 
 	user.setErrors(errors);
 	assert(!user.valid());
-	assertEquals(3, user.errors.length);
-	assertEquals(1, user.errors[0]);
-	assertEquals(2, user.errors[1]);
-	assertEquals(3, user.errors[2]);
+	assertEquals(2, user.errors.length);
+	assertEquals("Name can't be blank", errors[0]);
+	assertEquals("City can't be blank", errors[1]);
 }
 
 function testShouldDestroyItselfWhenSentDestroy () {

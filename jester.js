@@ -82,7 +82,7 @@ function Base(name, prefix, singular, plural) {
 Base.model = function(name, prefix, singular, plural) {eval(name + " = new Base(name, prefix, singular, plural);")}
 
 // helper URLs
-Base.prototype.singular_url = function() {return (this.id ? this._prefix + "/" + this._plural + "/" + this.id + ".xml" : "");}
+Base.prototype.singular_url = function(id) {return ((id || this.id) ? this._prefix + "/" + this._plural + "/" + (id || this.id) + ".xml" : "");}
 Base.prototype.plural_url = function() {return this._prefix + "/" + this._plural + ".xml";}
 
 // And a record shall be judged new or old by its ID
@@ -91,8 +91,8 @@ Base.prototype.new_record = function() {return !(this.id);}
 Base.prototype.valid = function() {return ! this.errors.any();}
 
 // Find by ID
-Base.prototype.find = function(id) {  
-  var doc = this._tree.parseHTTP(this._prefix + "/" + this._plural + "/" + id + ".xml", {});
+Base.prototype.find = function(id) {
+  var doc = this._tree.parseHTTP(this.singular_url(id), {});
   return this.build(this.attributesFromTree(doc[this._singular]));
 };
 
