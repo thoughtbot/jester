@@ -33,7 +33,7 @@ function setUp () {
     'first-name' : 'john',
     'admin' : { '@type' : 'boolean', '#text' : 'false' },
     'posts' : { 
-      'post' : [postDetails3]
+      'post' : postDetails3
     }
   }
   chadDetails = {
@@ -61,6 +61,16 @@ function setUp () {
     'body' : 'another body',
     'user' : ericDetails
   }
+  
+  // test for finding all, but where ObjTree doesn't use an array because there is only one result
+  allWithOneUserDetails = {
+    'users' : {
+      'user' : ericDetails
+    }
+  }
+  
+  // used as a flag to make sure callbacks get called
+  changed = false;
 }
     
 function testShouldGenerateAndStoreTheGivenClassNamesSingularAndPluralVersionsAndUseTheCurrentUrlAsTheUrlPrefixWhenConstructingABaseObject () {
@@ -158,7 +168,7 @@ function testShouldFindAllRecordsWhenSentFindAll () {
     }
   }
   
-  var users = User.find("all");
+  var users = User.find('all');
   assertEquals(3, users.length);
   
   var eric = User.find(1);
@@ -169,6 +179,34 @@ function testShouldFindAllRecordsWhenSentFindAll () {
   assertEquals(eric.constructor, users[0].constructor);
   for (var i=0; i<3; i++)
     assertEquals(i+1, users[i].id)
+  
+  User._tree = { parseHTTP :
+    function (url, options, callback) {
+      return allWithOneUserDetails;
+    }
+  }
+  
+  var users = User.find("all");
+  assertEquals(1, users.length);
+}
+
+function testRelationsWorkWithHasManyAndHasOne () {
+  var User = new Base('User');
+  User._tree = { parseHTTP :
+    function (url, options, callback) {
+      if (url == User.singular_url(1))
+        return {'user': ericDetails};
+      else if (url == User.singular_url(2))
+        return {'user': johnDetails};
+    }
+  }
+  
+  var eric = User.find(1);
+  assertEquals(2, eric.posts.length);
+  
+  var john = User.find(2);
+  assertEquals(1, john.posts.length);
+  
 }
 
 function testShouldSetTheObjectsAttributesToTheGivenAttributesWhenSentSetAttributes () {

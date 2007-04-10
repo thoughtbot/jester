@@ -87,17 +87,29 @@ Base.prototype.plural_url = function() {return this._prefix + "/" + this._plural
 
 // And a record shall be judged new or old by its ID
 Base.prototype.new_record = function() {return !(this.id);}
-// Valid helper
+// Validation helper
 Base.prototype.valid = function() {return ! this.errors.any();}
 
 // Find by ID
-Base.prototype.find = function(id) {
+Base.prototype.find = function(id, options) {
 
-  if (id == "all") {
-    var doc = this._tree.parseHTTP(this.plural_url(), {});
-    return doc[this._plural][this._singular].map(function(elem) {
+  if (id == "first" || id == "all") {
+    var url = this.plural_url()
+    var doc = this._tree.parseHTTP(url, {});
+    
+    // if only one result, wrap it in an array
+    if (!Base.elementHasMany(doc[this._plural]))
+      doc[this._plural][this._singular] = [doc[this._plural][this._singular]];
+      
+    var results = doc[this._plural][this._singular].map(function(elem) {
       return this.build(this.attributesFromTree(elem));
     }.bind(this));
+    
+    // This is better than requiring the controller to support a "limit" parameter
+    if (id == "first")
+      return results[0];
+      
+    return results;
   }
   else {
     if (isNaN(parseInt(id))) return null;
@@ -212,6 +224,22 @@ Base.prototype.attributesFromTree = function(elements) {
   
   return attributes;
 };
+
+// Returns true if the element has more objects beneath it, or just 1 or more attributes.
+// It's not perfect, this would mess up if an object had only one attribute, and it was an array.
+// For now, this is just one of the difficulties of dealing with ObjTree.
+Base.elementHasMany = function(element) {
+  var i = 0;
+  var singular = null;
+  var has_many = false;
+  for (var val in element) {
+    if (i == 0)
+      singular = val;
+    i += 1;
+  }
+  
+  return (element[singular] && typeof(element[singular]) == "object" && element[singular].length != null && i == 1);
+}
 
 // sets all the attribute accessors
 Base.prototype.setAttributes = function(attributes) {
