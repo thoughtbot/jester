@@ -92,15 +92,11 @@ Base.prototype.valid = function() {return ! this.errors.any();}
 
 // Find by ID
 Base.prototype.find = function(id, options) {
-
-  if (id == "first" || id == "all") {
-    var url = this.plural_url()
-    var doc = this._tree.parseHTTP(url, {});
-    
+  findAllTransform = function(doc) {
     // if only one result, wrap it in an array
     if (!Base.elementHasMany(doc[this._plural]))
       doc[this._plural][this._singular] = [doc[this._plural][this._singular]];
-      
+    
     var results = doc[this._plural][this._singular].map(function(elem) {
       return this.build(this.attributesFromTree(elem));
     }.bind(this));
@@ -109,15 +105,25 @@ Base.prototype.find = function(id, options) {
     if (id == "first")
       return results[0];
       
-    return results;
+    return results; 
+  }.bind(this);
+  
+  findOneTransform = function(doc) {
+    return this.build(this.attributesFromTree(doc[this._singular]));
+  }.bind(this);
+      
+  if (id == "first" || id == "all") {
+    var url = this.plural_url();
+    return this._request(findAllTransform, url, options);
   }
   else {
     if (isNaN(parseInt(id))) return null;
-    
-    var doc = this._tree.parseHTTP(this.singular_url(id), {});
-    return this.build(this.attributesFromTree(doc[this._singular]));
+    url = this.singular_url(id);
+    return this._request(findOneTransform, url, options);
   }
 };
+
+
 
 
 // Converts the XML tree returned from an errors object into an array of error messages
@@ -150,6 +156,7 @@ Base.prototype.build = function(attributes, name, prefix, singular, plural) {
   base.setAttributes(attributes);
   return base;
 };
+Base.prototype._new = Base.prototype.build;
 
 // Create (New + Save)
 Base.prototype.create = function(attributes) {
@@ -257,12 +264,14 @@ Base.prototype.setAttribute = function(attribute, value) {
 };
 
 // Destroy
+//
 Base.prototype.destroy = function(given_id) {
   var id = given_id || this.id;
   var req = new Ajax.Request(this.singular_url(), {
     method: "delete",
     asynchronous: false
   });
+  
  if (req.transport.status == 200) {
     this.id = null;
     return this;
@@ -344,4 +353,16 @@ Base.prototype.save = function() {
   
   // return whether the save succeeded
   return saved;
+};
+
+// handle all http requests
+// Currently uses ObjTree's ParseHTTP, which in turn uses Prototype
+Base.prototype._request = function(callback, url, user_callback) {
+  if (user_callback) {
+    return this._tree.parseHTTP(url, {}, function(doc) {
+      user_callback(callback(doc))
+    });
+  }
+  else
+    return callback(this._tree.parseHTTP(url, {}));
 };
