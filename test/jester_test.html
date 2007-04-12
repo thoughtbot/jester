@@ -8,15 +8,16 @@
     <script language="JavaScript" type="text/javascript" src="jsunit/app/jsUnitCore.js"></script>
     <script language="JavaScript" type="text/javascript" src="../prototype.js"></script>
     <script language="JavaScript" type="text/javascript" src="../ObjTree.js"></script>
+    <script language="JavaScript" type="text/javascript" src="../date.js"></script>
     <script language="JavaScript" type="text/javascript" src="../jester.js"></script>
   </head>
 
   <body>
     <script language="JavaScript" type="text/javascript">
 
-default_prefix = function() {return "http://" + window.location.hostname + (window.location.port ? ":" + window.location.port : "");}
-
 function setUp () {
+  default_prefix = function() {return "http://" + window.location.hostname + (window.location.port ? ":" + window.location.port : "");}
+
   postDetails1 = { 'id' : { '@type' : 'integer', '#text' : '1' }, 'title' : 'the title', 'body' : 'the body' }
   postDetails2 = { 'id' : { '@type' : 'integer', '#text' : '2' }, 'title' : 'another title', 'body' : 'another body' }
   postDetails3 = { 'id' : { '@type' : 'integer', '#text' : '2' }, 'title' : 'yet another title', 'body' : 'yet another body' }
@@ -24,6 +25,7 @@ function setUp () {
     'id' : { '@type' : 'integer', '#text' : '1' },
     'first-name' : 'eric',
     'admin' : { '@type' : 'boolean', '#text' : 'true' },
+    'created_at' : { '@type' : 'datetime', '#text' : '2007-04-08T15:12:06-04:00' },
     'posts' : { 
       'post' : [postDetails1, postDetails2]
     }
@@ -32,6 +34,7 @@ function setUp () {
     'id' : { '@type' : 'integer', '#text' : '2' },
     'first-name' : 'john',
     'admin' : { '@type' : 'boolean', '#text' : 'false' },
+    'created_at' : { '@type' : 'datetime', '#text' : '2007-04-09T15:12:06-04:00' },
     'posts' : { 
       'post' : postDetails3
     }
@@ -40,6 +43,7 @@ function setUp () {
     'id' : { '@type' : 'integer', '#text' : '3' },
     'first-name' : 'chad',
     'admin' : { '@type' : 'boolean', '#text' : 'true' },
+    'created_at' : { '@type' : 'datetime', '#text' : '2007-04-10T15:12:06-04:00' },
   }
   
   allUsersDetails = {
@@ -72,64 +76,11 @@ function setUp () {
   // used as a flag to make sure callbacks get called
   changed = false;
 }
-    
-function testShouldGenerateAndStoreTheGivenClassNamesSingularAndPluralVersionsAndUseTheCurrentUrlAsTheUrlPrefixWhenConstructingABaseObject () {
-  var User = new Base('User');
-  assertEquals('User', User._name);
-	assertEquals('user', User._singular);
-	assertEquals('users', User._plural);
-	assertEquals(default_prefix(), User._prefix);
-	assert(User.errors.length == 0);
-}
-      
-function testShouldUseTheGivenUrlPrefixWhenConstructingABaseObject () {
-  var User = new Base('User', 'http://www.thoughtbot.com');
-  assertEquals('http://www.thoughtbot.com', User._prefix);
 
-  var User = new Base('User', 'public/forum');
-  assertEquals(default_prefix() + '/public/forum', User._prefix);
 
-  var User = new Base('User', '/public/forum');
-  assertEquals(default_prefix() + '/public/forum', User._prefix);
-}
-
-function testShouldUseTheGivenSingularAndPluralClassNamesWhenConstructingABaseObject () {
-  var Person = new Base('Person', null, 'person');
-  assertEquals('person', Person._singular);
-  assertEquals('persons', Person._plural);
-
-  var Person = new Base('Person', null, 'person', 'people');
-  assertEquals('person', Person._singular);
-  assertEquals('people', Person._plural);
-}
-
-function testShouldReturnTheSingularUrlWhenSentSingularUrl () {
-  var user = new Base('User', 'http://www.thoughtbot.com');
-  user.id = 1;
-  assertEquals('http://www.thoughtbot.com/users/1.xml', user.singular_url());
-}
-
-function testShouldReturnThePluralUrlWhenSentPluralUrl () {
-  var User = new Base('User', 'http://www.thoughtbot.com');
-  assertEquals('http://www.thoughtbot.com/users.xml', User.plural_url());
-}
-
-function testShouldSayAGivenObjectIsNewIfItDoesNotHaveAnIdWhenSentNewRecord () {
-  var user = new Base('User');
-  assert(user.new_record());
-  
-  user.id = 1;
-  assert(! user.new_record());
-}
-
-function testShouldSayTheGivenObjectIsValidIfItDoesNotHaveAnyErrorsWhenSentValid () {
-  var User = new Base('User');
-  var user = User.build();
-  
-  assert(user.valid());
-  user.errors[0] = 'error';
-  assert(! user.valid());
-}
+/********************************************
+ ************ FIND TESTS ********************
+ ********************************************/
 
 function testShouldFindTheRecordWithTheGivenIdWhenSentFind () {
   var User = new Base('User', 'http://www.thoughtbot.com');
@@ -147,6 +98,10 @@ function testShouldFindTheRecordWithTheGivenIdWhenSentFind () {
 	assertEquals('http://www.thoughtbot.com', eric._prefix);
 	assertEquals(1, eric.id);
 	assertEquals('eric', eric.first_name);
+	// test date parsing
+	assertEquals(Date, eric.created_at.constructor)
+	assertEquals(2007, eric.created_at.getFullYear())
+	assertEquals(3, eric.created_at.getMonth())
 	assert(eric.admin);
 
 	assertEquals(2, eric.posts.length);
@@ -155,6 +110,13 @@ function testShouldFindTheRecordWithTheGivenIdWhenSentFind () {
 	assertEquals('the body', eric.posts[0].body);
 	assertEquals('another title', eric.posts[1].title);
 	assertEquals('another body', eric.posts[1].body);
+	
+	// Simulate jester_utils not being loaded
+	var parse = Date.parse;
+	Date.parse = function() {return NaN;}
+	var eric = User.find(1)
+	assertEquals("string", typeof(eric.created_at))
+	Date.parse = parse; // restore Date.parse
 }
 
 function testShouldFindAllRecordsWhenSentFindAll () {
@@ -190,6 +152,10 @@ function testShouldFindAllRecordsWhenSentFindAll () {
   assertEquals(1, users.length);
 }
 
+/********************************************
+ ************ ASSOCIATION TESTS *************
+ ********************************************/
+ 
 function testRelationsWorkWithHasManyAndHasOne () {
   var User = new Base('User');
   User._tree = { parseHTTP :
@@ -209,14 +175,18 @@ function testRelationsWorkWithHasManyAndHasOne () {
   
 }
 
-function testShouldSetTheObjectsAttributesToTheGivenAttributesWhenSentSetAttributes () {
-  var eric = new Base('User');
-	assertUndefined(eric.first_name);
 
-	eric.setAttributes({ 'first_name' : 'eric' });
-	assertEquals('eric', eric.first_name);
-	assertEquals(1, eric.attributes.length);
-	assertEquals('first_name', eric.attributes[0]);
+/********************************************
+ ************ VALIDATION TESTS ********************
+ ********************************************/
+
+function testShouldSayTheGivenObjectIsValidIfItDoesNotHaveAnyErrorsWhenSentValid () {
+  var User = new Base('User');
+  var user = User.build();
+  
+  assert(user.valid());
+  user.errors[0] = 'error';
+  assert(! user.valid());
 }
 
 function testShouldSeeTheObjectsErrorsFromTheGivenErrorsElementsWhenMadeFromTree () {
@@ -241,6 +211,50 @@ function testShouldSetTheObjectsErrorsWithTheGivenArrayOfErrorsWhenSentSetErrors
 	assertEquals("Name can't be blank", errors[0]);
 	assertEquals("City can't be blank", errors[1]);
 }
+
+function testShouldFillItsErrorsCollectionIfItsInvalidWhenSentSave() {
+  var user = new Base('User');
+  user.setAttributes({ 'first_name' : '' });
+  assert(user.new_record());
+
+  Ajax = { Request : function (url, options) {
+	  this.transport = { status : 200,
+	    responseText : "<errors><error>First name can't be blank</error></errors>",
+	  };
+	  this.getHeader = function (header) {
+	    return 'http://www.thoughtbot.com/users/1';
+	  }
+	}}
+
+	assert(! user.save());
+	assert(! user.valid());
+	assertEquals(1, user.errors.length);
+	assertEquals("First name can't be blank", user.errors[0]);
+
+  var user = new Base('User');
+	user.setAttributes({ 'id' : '1', 'first_name' : '' });
+	assert(! user.new_record());
+
+	Ajax = { Request : function (url, options) {
+	  this.transport = { status : 200,
+	    responseText : "<errors><error>First name can't be blank</error></errors>",
+	  };
+	  this.getHeader = function (header) {
+	    return 'http://www.thoughtbot.com/users/1';
+	  }
+  }}
+
+	assert(! user.save());
+	assert(! user.valid());
+	assertEquals(1, user.errors.length);
+	assertEquals("First name can't be blank", user.errors[0]);
+}
+
+
+
+/********************************************
+ ************ CRUD TESTS ********************
+ ********************************************/
 
 function testShouldDestroyItselfWhenSentDestroy () {
   var user = new Base('User');
@@ -293,42 +307,78 @@ function testShouldUpdateAnExistingRecordIfItsAnExistingObjectWhenSentSave () {
 	assert(user.save());
 }
 
-function testShouldFillItsErrorsCollectionIfItsInvalidWhenSentSave() {
+
+/********************************************
+ ************ INTERNAL TESTS ****************
+ ********************************************/
+
+function testShouldSetTheObjectsAttributesToTheGivenAttributesWhenSentSetAttributes () {
+  var eric = new Base('User');
+	assertUndefined(eric.first_name);
+
+	eric.setAttributes({ 'first_name' : 'eric' });
+	assertEquals('eric', eric.first_name);
+	assertEquals(1, eric.attributes.length);
+	assertEquals('first_name', eric.attributes[0]);
+}
+
+function testShouldGenerateAndStoreTheGivenClassNamesSingularAndPluralVersionsAndUseTheCurrentUrlAsTheUrlPrefixWhenConstructingABaseObject () {
+  Base.model('User');
+  assertEquals('User', User._name);
+	assertEquals('user', User._singular);
+	assertEquals('users', User._plural);
+	assertEquals(default_prefix(), User._prefix);
+	assert(User.errors.length == 0);
+}
+      
+function testShouldUseTheGivenUrlPrefixWhenConstructingABaseObject () {
+  Base.model('User', 'http://www.thoughtbot.com');
+  assertEquals('http://www.thoughtbot.com', User._prefix);
+
+  Base.model('User', 'public/forum');
+  assertEquals(default_prefix() + '/public/forum', User._prefix);
+
+  Base.model('User', '/public/forum');
+  assertEquals(default_prefix() + '/public/forum', User._prefix);
+}
+
+function testShouldUseTheGivenSingularAndPluralClassNamesWhenConstructingABaseObject () {
+  // base case
+  Base.model('Person', null);
+  assertEquals('person', Person._singular);
+  assertEquals('people', Person._plural);
+  
+  // singular override
+  Base.model('Person', null, 'user')
+  assertEquals('user', Person._singular);
+  assertEquals('users', Person._plural);
+
+  // plural override
+  Base.model('Person', null, 'person', 'persons');
+  assertEquals('person', Person._singular);
+  assertEquals('persons', Person._plural);
+}
+
+function testShouldReturnTheSingularUrlWhenSentSingularUrl () {
+  var user = new Base('User', 'http://www.thoughtbot.com');
+  user.id = 1;
+  assertEquals('http://www.thoughtbot.com/users/1.xml', user.singular_url());
+  
+  // test version to generate singular urls for any id
+  assertEquals('http://www.thoughtbot.com/users/2.xml', user.singular_url(2));
+}
+
+function testShouldReturnThePluralUrlWhenSentPluralUrl () {
+  var User = new Base('User', 'http://www.thoughtbot.com');
+  assertEquals('http://www.thoughtbot.com/users.xml', User.plural_url());
+}
+
+function testShouldSayAGivenObjectIsNewIfItDoesNotHaveAnIdWhenSentNewRecord () {
   var user = new Base('User');
-  user.setAttributes({ 'first_name' : '' });
   assert(user.new_record());
-
-  Ajax = { Request : function (url, options) {
-	  this.transport = { status : 200,
-	    responseText : "<errors><error>First name can't be blank</error></errors>",
-	  };
-	  this.getHeader = function (header) {
-	    return 'http://www.thoughtbot.com/users/1';
-	  }
-	}}
-
-	assert(! user.save());
-	assert(! user.valid());
-	assertEquals(1, user.errors.length);
-	assertEquals("First name can't be blank", user.errors[0]);
-
-  var user = new Base('User');
-	user.setAttributes({ 'id' : '1', 'first_name' : '' });
-	assert(! user.new_record());
-
-	Ajax = { Request : function (url, options) {
-	  this.transport = { status : 200,
-	    responseText : "<errors><error>First name can't be blank</error></errors>",
-	  };
-	  this.getHeader = function (header) {
-	    return 'http://www.thoughtbot.com/users/1';
-	  }
-  }}
-
-	assert(! user.save());
-	assert(! user.valid());
-	assertEquals(1, user.errors.length);
-	assertEquals("First name can't be blank", user.errors[0]);
+  
+  user.id = 1;
+  assert(! user.new_record());
 }
 
     </script>
