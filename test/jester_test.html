@@ -152,6 +152,30 @@ function testShouldFindAllRecordsWhenSentFindAll () {
   assertEquals(1, users.length);
 }
 
+// reload is a find operation
+function testReloadShouldRefindObject () {
+  var User = new Base('User', 'http://www.thoughtbot.com');
+  User._tree = { parseHTTP : 
+    function (url, options, callback) {
+      if (url == User.singular_url(1))
+        return {'user': ericDetails}
+    }
+  }
+  var eric = User.find(1)
+  assertEquals("eric", eric.first_name)
+  
+  // fake that the user details got updated
+  eric._tree = { parseHTTP : 
+    function (url, options, callback) {
+      if (url == User.singular_url(1))
+        return {'user': johnDetails}
+    }
+  }
+  
+  eric.reload();
+  assertEquals("john", eric.first_name)
+}
+
 /********************************************
  ************ ASSOCIATION TESTS *************
  ********************************************/

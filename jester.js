@@ -71,6 +71,10 @@ function Base(name, prefix, singular, plural) {
   else
     this._prefix = default_prefix();
   
+  // Initialize no attributes, no associations
+  this.attributes = [];
+  this.associations = [];
+  
   // Initialize with no errors
   this.errors = [];
   
@@ -88,18 +92,19 @@ Base.prototype.plural_url = function() {return this._prefix + "/" + this._plural
 
 // And a record shall be judged new or old by its ID
 Base.prototype.new_record = function() {return !(this.id);}
+
 // Validation helper
 Base.prototype.valid = function() {return ! this.errors.any();}
 
 // Find by ID
-Base.prototype.find = function(id, options) {
+Base.prototype.find = function(id, callback) {
   findAllTransform = function(doc) {
     // if only one result, wrap it in an array
     if (!Base.elementHasMany(doc[this._plural]))
       doc[this._plural][this._singular] = [doc[this._plural][this._singular]];
     
     var results = doc[this._plural][this._singular].map(function(elem) {
-      return this.build(this.attributesFromTree(elem));
+      return this.build(this.dataFromTree(elem));
     }.bind(this));
     
     // This is better than requiring the controller to support a "limit" parameter
@@ -110,22 +115,32 @@ Base.prototype.find = function(id, options) {
   }.bind(this);
   
   findOneTransform = function(doc) {
-    return this.build(this.attributesFromTree(doc[this._singular]));
+    data = this.dataFromTree(doc[this._singular]);
+    return this.build(data);
   }.bind(this);
       
   if (id == "first" || id == "all") {
     var url = this.plural_url();
-    return this._request(findAllTransform, url, options);
+    return this._request(findAllTransform, url, callback);
   }
   else {
     if (isNaN(parseInt(id))) return null;
     url = this.singular_url(id);
-    return this._request(findOneTransform, url, options);
+    return this._request(findOneTransform, url, callback);
   }
 };
 
-
-
+// Reload
+Base.prototype.reload = function() {
+  if (this.id) {
+    var copy = this.find(this.id);
+    for (var i=0; i<copy.attributes.length; i++)
+      this.setAttribute(copy.attributes[i], copy[copy.attributes[i]]);
+    for (var i=0; i<copy.associations.length; i++)
+      this.setAssociation(copy.associations[i], copy[copy.associations[i]]);
+  }
+  return this;
+}
 
 // Converts the XML tree returned from an errors object into an array of error messages
 Base.prototype.errorsFromTree = function(elements) {
@@ -147,14 +162,14 @@ Base.prototype.setErrors = function(errors) {
 }
 
 // New (no Save)
-Base.prototype.build = function(attributes, name, prefix, singular, plural) {
+Base.prototype.build = function(data, name, prefix, singular, plural) {
   var base;
   if (name)
     base = new Base(name, prefix, singular, plural)
   else
     base = new Base(this._name, this._prefix, this._singular, this._plural);
-    
-  base.setAttributes(attributes);
+  
+  base.setData(data);
   return base;
 };
 Base.prototype._new = Base.prototype.build;
@@ -167,8 +182,28 @@ Base.prototype.create = function(attributes) {
   return base;
 };
 
+// Destroy
+// If not given an ID, destroys itself if it has an ID.  If given an ID, destroys that record.
+Base.prototype.destroy = function(given_id) {
+  var id = given_id || this.id;
+  if (!id) return false;
+  
+  var req = new Ajax.Request(this.singular_url(id), {
+    method: "delete",
+    asynchronous: false
+  });
+  
+  if (req.transport.status == 200) {
+    if (!given_id || this.id == given_id)
+      this.id = null;
+    return this;
+  }
+  else 
+    return false;
+};
+
 // Converts the XML tree returned from a single object into a hash of attribute values
-Base.prototype.attributesFromTree = function(elements) {
+Base.prototype.dataFromTree = function(elements) {
   var attributes = {}
   for (var attr in elements) {
     // pull out the value
@@ -216,14 +251,14 @@ Base.prototype.attributesFromTree = function(elements) {
           elements[plural][singular] = [elements[plural][singular]];
         
         elements[plural][singular].each(function(single) {
-          value.push(this.build(this.attributesFromTree(single), name, this._prefix, singular, plural));
+          value.push(this.build(this.dataFromTree(single), name, this._prefix, singular, plural));
         }.bind(this));
       }
       // has_one or belongs_to
       else {
         singular = attr;
         var name = singular.capitalize();
-        value = this.build(this.attributesFromTree(value), name, this._prefix, singular);
+        value = this.build(this.dataFromTree(value), name, this._prefix, singular);
       }
     }
     
@@ -235,53 +270,71 @@ Base.prototype.attributesFromTree = function(elements) {
   return attributes;
 };
 
-// Returns true if the element has more objects beneath it, or just 1 or more attributes.
-// It's not perfect, this would mess up if an object had only one attribute, and it was an array.
-// For now, this is just one of the difficulties of dealing with ObjTree.
-Base.elementHasMany = function(element) {
-  var i = 0;
-  var singular = null;
-  var has_many = false;
-  for (var val in element) {
-    if (i == 0)
-      singular = val;
-    i += 1;
+
+// Sets all attributes and associations at once
+// Deciding between the two on whether the attribute is a complex object or a scalar
+Base.prototype.setData = function(data) {
+  this.clear();
+  for (var attr in data) {
+    if (typeof(data[attr]) == "object")
+      this.setAssociation(attr, data[attr]);
+    else
+      this.setAttribute(attr, data[attr]);
   }
-  
-  return (element[singular] && typeof(element[singular]) == "object" && element[singular].length != null && i == 1);
+};
+
+// Set attributes
+// Force this array to be treated as attributes
+Base.prototype.setAttributes = function(attributes) {
+  this.clearAttributes();
+  for (var attr in attributes)
+    this.setAttribute(attr, attributes[attr])
 }
 
-// sets all the attribute accessors
-Base.prototype.setAttributes = function(attributes) {
-  this.attributes = [];
-  for (var attr in attributes)
-    this.setAttribute(attr, attributes[attr]);
-};
-
+// Set associations
+// Force this array to be treated as associations
+Base.prototype.setAssociations = function(associations) {
+  this.clearAssociations();
+  for (var assoc in associations)
+    this.setAssociation(assoc, associations[assoc])
+}
+    
 // set a property accessor for an attribute
 // I don't see any issue with calling this publicly, either
-Base.prototype.setAttribute = function(attribute, value) {
+Base.prototype.setAttribute = function(attribute, value) {  
   this[attribute] = value;
-  if (!(typeof(value) == "object") && !(this.attributes.include(attribute)))
-    this.attributes.push(attribute);
+  if (!(this.attributes.include(attribute)))
+    this.attributes.push(attribute);  
 };
 
-// Destroy
-//
-Base.prototype.destroy = function(given_id) {
-  var id = given_id || this.id;
-  var req = new Ajax.Request(this.singular_url(), {
-    method: "delete",
-    asynchronous: false
-  });
-  
- if (req.transport.status == 200) {
-    this.id = null;
-    return this;
-  }
-  else 
-    return false; 
-};
+// sets a property accessor for an association
+Base.prototype.setAssociation = function(association, value) {
+  this[association] = value;
+  if (!(this.associations.include(attribute)))
+    this.associations.push(attribute);
+}
+
+// clear the data
+Base.prototype.clear = function() {
+  this.clearAttributes();
+  this.clearAssociations();
+}
+
+// clear only attributes
+Base.prototype.clearAttributes = function() {
+  for (var i=0; i<this.attributes.length; i++)
+    this[this.attributes[i]] = null;
+  this.attributes = [];
+}
+
+// clear only associations
+Base.prototype.clearAssociations = function() {
+  for (var i=0; i<this.associations.length; i++)
+    this[this.associations[i]] = null;
+  this.associations = [];
+}
+
+
 
 // Save (Create and Update)
 Base.prototype.save = function() {
@@ -370,6 +423,21 @@ Base.prototype._request = function(callback, url, user_callback) {
     return callback(this._tree.parseHTTP(url, {}));
 };
 
+// Returns true if the element has more objects beneath it, or just 1 or more attributes.
+// It's not perfect, this would mess up if an object had only one attribute, and it was an array.
+// For now, this is just one of the difficulties of dealing with ObjTree.
+Base.elementHasMany = function(element) {
+  var i = 0;
+  var singular = null;
+  var has_many = false;
+  for (var val in element) {
+    if (i == 0)
+      singular = val;
+    i += 1;
+  }
+  
+  return (element[singular] && typeof(element[singular]) == "object" && element[singular].length != null && i == 1);
+}
 
 /* 
   Inflector library, contributed graciously to Jester by Ryan Schuft.  This is a port of Rails' built in pluralization.
