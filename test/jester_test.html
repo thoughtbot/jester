@@ -135,8 +135,8 @@ function testShouldFindAllRecordsWhenSentFindAll () {
   assertEquals(3, users.length);
   
   var eric = User.find(1);
-  for (var i =0; i<eric.attributes.length; i++)
-    assertEquals(eric.attributes[i], users[0].attributes[i]);
+  for (var i =0; i<eric.properties.length; i++)
+    assertEquals(eric.properties[i], users[0].properties[i]);
     
   assertEquals(eric.first_name, users[0].first_name);
   assertEquals(eric.constructor, users[0].constructor);
@@ -239,7 +239,7 @@ function testShouldSetTheObjectsErrorsWithTheGivenArrayOfErrorsWhenSentSetErrors
 
 function testShouldFillItsErrorsCollectionIfItsInvalidWhenSentSave() {
   var user = new Base('User');
-  user._setAttributes({ 'first_name' : '' });
+  user._setProperties({ 'first_name' : '' });
   assert(user.new_record());
 
   Ajax = { Request : function (url, options) {
@@ -257,7 +257,7 @@ function testShouldFillItsErrorsCollectionIfItsInvalidWhenSentSave() {
 	assertEquals("First name can't be blank", user.errors[0]);
 
   var user = new Base('User');
-	user._setAttributes({ 'id' : '1', 'first_name' : '' });
+	user._setProperties({ 'id' : '1', 'first_name' : '' });
 	assert(! user.new_record());
 
 	Ajax = { Request : function (url, options) {
@@ -337,14 +337,14 @@ function testShouldUpdateAnExistingRecordIfItsAnExistingObjectWhenSentSave () {
  ************ INTERNAL TESTS ****************
  ********************************************/
 
-function testShouldSetTheObjectsAttributesToTheGivenAttributesWhenSentSetAttributes () {
+function testShouldSetTheObjectsPropertiesToTheGivenPropertiesWhenSentSetProperties () {
   var eric = new Base('User');
 	assertUndefined(eric.first_name);
 
-	eric._setAttributes({ 'first_name' : 'eric' });
+	eric._setProperties({ 'first_name' : 'eric' });
 	assertEquals('eric', eric.first_name);
-	assertEquals(1, eric.attributes.length);
-	assertEquals('first_name', eric.attributes[0]);
+	assertEquals(1, eric.properties.length);
+	assertEquals('first_name', eric.properties[0]);
 }
 
 function testShouldGenerateAndStoreTheGivenClassNamesSingularAndPluralVersionsAndUseTheCurrentUrlAsTheUrlPrefixWhenConstructingABaseObject () {

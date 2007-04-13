@@ -72,7 +72,7 @@ function Base(name, prefix, singular, plural) {
     this._prefix = default_prefix();
   
   // Initialize no attributes, no associations
-  this.attributes = [];
+  this.properties = [];
   this.associations = [];
   
   // Initialize with no errors
@@ -111,7 +111,7 @@ extend(Base.prototype, {
         doc[this._plural][this._singular] = [doc[this._plural][this._singular]];
       
       var results = doc[this._plural][this._singular].map(function(elem) {
-        return this.build(this._dataFromTree(elem));
+        return this.build(this._attributesFromTree(elem));
       }.bind(this));
       
       // This is better than requiring the controller to support a "limit" parameter
@@ -122,8 +122,8 @@ extend(Base.prototype, {
     }.bind(this);
     
     findOneTransform = function(doc) {
-      data = this._dataFromTree(doc[this._singular]);
-      return this.build(data);
+      attributes = this._attributesFromTree(doc[this._singular]);
+      return this.build(attributes);
     }.bind(this);
     
     if (id == "first" || id == "all") {
@@ -140,8 +140,8 @@ extend(Base.prototype, {
   reload : function() {
     if (this.id) {
       var copy = this.find(this.id);
-      for (var i=0; i<copy.attributes.length; i++)
-        this._setAttribute(copy.attributes[i], copy[copy.attributes[i]]);
+      for (var i=0; i<copy.properties.length; i++)
+        this._setProperty(copy.properties[i], copy[copy.properties[i]]);
       for (var i=0; i<copy.associations.length; i++)
         this._setAssociation(copy.associations[i], copy[copy.associations[i]]);
     }
@@ -149,14 +149,14 @@ extend(Base.prototype, {
   },
   
   // This function would be named "new", if 
-  build : function(data, name, prefix, singular, plural) {
+  build : function(attributes, name, prefix, singular, plural) {
     var base;
     if (name)
       base = new Base(name, prefix, singular, plural)
     else
       base = new Base(this._name, this._prefix, this._singular, this._plural);
     
-    base._setData(data);
+    base._setAttributes(attributes);
     return base;
   },
   
@@ -206,7 +206,7 @@ extend(Base.prototype, {
     
     // collect params
     var params = {};
-    (this.attributes).each(function(value, i) {
+    (this.properties).each(function(value, i) {
       params[this._singular + "[" + value + "]"] = this[value];
     }.bind(this));
     
@@ -259,6 +259,19 @@ extend(Base.prototype, {
     return saved;
   },
   
+  // mimics ActiveRecord's behavior of omitting associations, but keeping foreign keys
+  attributes : function() {
+    attributes = {}
+    for (var i=0; i<this.properties.length; i++)
+      attributes[this.properties[i]] = this[this.properties[i]];
+    return attributes;
+  },
+    
+  
+  /*
+    Internal methods.
+  */
+  
   _errorsFromTree : function(elements) {
   
     var errors = [];
@@ -278,7 +291,7 @@ extend(Base.prototype, {
   },
   
   // Converts the XML tree returned from a single object into a hash of attribute values
-  _dataFromTree : function(elements) {
+  _attributesFromTree : function(elements) {
     var attributes = {}
     for (var attr in elements) {
       // pull out the value
@@ -326,14 +339,14 @@ extend(Base.prototype, {
             elements[plural][singular] = [elements[plural][singular]];
           
           elements[plural][singular].each(function(single) {
-            value.push(this.build(this._dataFromTree(single), name, this._prefix, singular, plural));
+            value.push(this.build(this._attributesFromTree(single), name, this._prefix, singular, plural));
           }.bind(this));
         }
         // has_one or belongs_to
         else {
           singular = attr;
           var name = singular.capitalize();
-          value = this.build(this._dataFromTree(value), name, this._prefix, singular);
+          value = this.build(this._attributesFromTree(value), name, this._prefix, singular);
         }
       }
       
@@ -348,22 +361,22 @@ extend(Base.prototype, {
   
   // Sets all attributes and associations at once
   // Deciding between the two on whether the attribute is a complex object or a scalar
-  _setData : function(data) {
+  _setAttributes : function(attributes) {
     this._clear();
-    for (var attr in data) {
-      if (typeof(data[attr]) == "object")
-        this._setAssociation(attr, data[attr]);
+    for (var attr in attributes) {
+      if (typeof(attributes[attr]) == "object")
+        this._setAssociation(attr, attributes[attr]);
       else
-        this._setAttribute(attr, data[attr]);
+        this._setProperty(attr, attributes[attr]);
     }
   },
   
   // Set attributes
   // Force this array to be treated as attributes
-  _setAttributes : function(attributes) {
-    this._clearAttributes();
-    for (var attr in attributes)
-      this._setAttribute(attr, attributes[attr])
+  _setProperties : function(properties) {
+    this._clearProperties();
+    for (var prop in properties)
+      this._setProperty(prop, properties[prop])
   },
   
   _setAssociations : function(associations) {
@@ -372,27 +385,27 @@ extend(Base.prototype, {
       this._setAssociation(assoc, associations[assoc])
   },
       
-  _setAttribute : function(attribute, value) {  
-    this[attribute] = value;
-    if (!(this.attributes.include(attribute)))
-      this.attributes.push(attribute);  
+  _setProperty : function(property, value) {  
+    this[property] = value;
+    if (!(this.properties.include(property)))
+      this.properties.push(property);  
   },
   
   _setAssociation : function(association, value) {
     this[association] = value;
-    if (!(this.associations.include(attribute)))
-      this.associations.push(attribute);
+    if (!(this.associations.include(association)))
+      this.associations.push(association);
   },
   
   _clear : function() {
-    this._clearAttributes();
+    this._clearProperties();
     this._clearAssociations();
   },
   
-  _clearAttributes : function() {
-    for (var i=0; i<this.attributes.length; i++)
-      this[this.attributes[i]] = null;
-    this.attributes = [];
+  _clearProperties : function() {
+    for (var i=0; i<this.properties.length; i++)
+      this[this.properties[i]] = null;
+    this.properties = [];
   },
   
   _clearAssociations : function() {
