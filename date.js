@@ -1,5 +1,6 @@
 /* 
-  Date parsing library, _____?
+  Date parsing library, contributed kindly to Jester by Nicolas Barthelemy.
+  Doesn't require any external libraries.
 */
 
 // Zero-Fill
