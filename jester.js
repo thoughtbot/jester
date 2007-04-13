@@ -77,14 +77,24 @@ function Base(name, prefix, singular, plural) {
   
   // Initialize with no errors
   this.errors = [];
-  
-  // Initialize XML tree once
-  this._tree = new XML.ObjTree();
-  this._tree.attr_prefix = "@";
 }
 
 // Model declaration helper
 Base.model = function(name, prefix, singular, plural) {eval(name + " = new Base(name, prefix, singular, plural);")}
+
+Base.tree = new XML.ObjTree();
+Base.tree.attr_prefix = "@";
+
+// Helper to aid in handling either async or synchronous requests
+Base.request = function(callback, url, user_callback) {
+  if (user_callback) {
+    return Base.tree.parseHTTP(url, {}, function(doc) {
+      user_callback(callback(doc))
+    });
+  }
+  else
+    return callback(Base.tree.parseHTTP(url, {}));
+}
 
 // Idea taken from Prototype
 extend = function(object, properties) {for (var property in properties) object[property] = properties[property];}
@@ -115,15 +125,15 @@ extend(Base.prototype, {
       data = this._dataFromTree(doc[this._singular]);
       return this.build(data);
     }.bind(this);
-        
+    
     if (id == "first" || id == "all") {
       var url = this._plural_url();
-      return this._request(findAllTransform, url, callback);
+      return Base.request(findAllTransform, url, callback);
     }
     else {
       if (isNaN(parseInt(id))) return null;
       url = this._singular_url(id);
-      return this._request(findOneTransform, url, callback);
+      return Base.request(findOneTransform, url, callback);
     }
   },
   
@@ -225,7 +235,7 @@ extend(Base.prototype, {
       // check for errors
       else if (status == 200) {
         if (req.transport.responseText) {
-          var doc = this._tree.parseXML(req.transport.responseText);
+          var doc = Base.tree.parseXML(req.transport.responseText);
           if (doc.errors)
             this._setErrors(this._errorsFromTree(doc.errors));
         }
@@ -237,7 +247,7 @@ extend(Base.prototype, {
         saved = true;
         // check for errors
         if (req.transport.responseText) {
-          var doc = this._tree.parseXML(req.transport.responseText);
+          var doc = Base.tree.parseXML(req.transport.responseText);
           if (doc.errors) {
             this._setErrors(this._errorsFromTree(doc.errors));
             saved = false;
@@ -394,16 +404,6 @@ extend(Base.prototype, {
   // helper URLs
   _singular_url : function(id) {return ((id || this.id) ? this._prefix + "/" + this._plural + "/" + (id || this.id) + ".xml" : "");},
   _plural_url : function() {return this._prefix + "/" + this._plural + ".xml";},
-  
-  _request : function(callback, url, user_callback) {
-    if (user_callback) {
-      return this._tree.parseHTTP(url, {}, function(doc) {
-        user_callback(callback(doc))
-      });
-    }
-    else
-      return callback(this._tree.parseHTTP(url, {}));
-  },
 
 });
 

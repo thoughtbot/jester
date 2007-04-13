@@ -75,6 +75,7 @@ function setUp () {
   
   // used as a flag to make sure callbacks get called
   changed = false;
+  
 }
 
 
@@ -84,7 +85,7 @@ function setUp () {
 
 function testShouldFindTheRecordWithTheGivenIdWhenSentFind () {
   var User = new Base('User', 'http://www.thoughtbot.com');
-  User._tree = { parseHTTP : 
+  Base.tree = { parseHTTP : 
     function (url, options, callback) {
       if (url == User._singular_url(1))
         return {'user': ericDetails}
@@ -121,7 +122,7 @@ function testShouldFindTheRecordWithTheGivenIdWhenSentFind () {
 
 function testShouldFindAllRecordsWhenSentFindAll () {
   var User = new Base('User');
-  User._tree = { parseHTTP :
+  Base.tree = { parseHTTP :
     function (url, options, callback) {
       if (url == User._plural_url())
         return allUsersDetails;
@@ -142,7 +143,7 @@ function testShouldFindAllRecordsWhenSentFindAll () {
   for (var i=0; i<3; i++)
     assertEquals(i+1, users[i].id)
   
-  User._tree = { parseHTTP :
+  Base.tree = { parseHTTP :
     function (url, options, callback) {
       return allWithOneUserDetails;
     }
@@ -155,7 +156,7 @@ function testShouldFindAllRecordsWhenSentFindAll () {
 // reload is a find operation
 function testReloadShouldRefindObject () {
   var User = new Base('User', 'http://www.thoughtbot.com');
-  User._tree = { parseHTTP : 
+  Base.tree = { parseHTTP : 
     function (url, options, callback) {
       if (url == User._singular_url(1))
         return {'user': ericDetails}
@@ -165,7 +166,7 @@ function testReloadShouldRefindObject () {
   assertEquals("eric", eric.first_name)
   
   // fake that the user details got updated
-  eric._tree = { parseHTTP : 
+  Base.tree = { parseHTTP : 
     function (url, options, callback) {
       if (url == User._singular_url(1))
         return {'user': johnDetails}
@@ -182,7 +183,7 @@ function testReloadShouldRefindObject () {
  
 function testRelationsWorkWithHasManyAndHasOne () {
   var User = new Base('User');
-  User._tree = { parseHTTP :
+  Base.tree = { parseHTTP :
     function (url, options, callback) {
       if (url == User._singular_url(1))
         return {'user': ericDetails};
