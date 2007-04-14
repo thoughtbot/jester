@@ -85,8 +85,8 @@ Base.model = function(name, prefix, singular, plural) {eval(name + " = new Base(
 Base.tree = new XML.ObjTree();
 Base.tree.attr_prefix = "@";
 
-// Helper to aid in handling either async or synchronous requests
-Base.request = function(callback, url, user_callback) {
+// Will soon be removed, which will jettison the major tie to Prototype
+Base.parseHTTP = function(callback, url, user_callback) {
   if (user_callback) {
     return Base.tree.parseHTTP(url, {}, function(doc) {
       user_callback(callback(doc))
@@ -96,7 +96,20 @@ Base.request = function(callback, url, user_callback) {
     return callback(Base.tree.parseHTTP(url, {}));
 }
 
-// Idea taken from Prototype
+// Helper to aid in handling either async or synchronous requests
+Base.request = function(callback, url, options, user_callback) {
+  if (user_callback) options.asynchronous = true;
+  else options.asynchronous = false;
+  
+  if (options.asynchronous) {
+    options.onComplete = function(transport) {user_callback(callback(transport));}
+    return new Ajax.Request(url, options);
+  }
+  else
+    return callback(new Ajax.Request(url, options).transport);
+}
+
+// Logic taken from Prototype
 extend = function(object, properties) {for (var property in properties) object[property] = properties[property];}
 
 
@@ -105,7 +118,7 @@ extend(Base.prototype, {
   valid : function() {return ! this.errors.any();},
   
   find : function(id, callback) {
-    findAllTransform = function(doc) {
+    findAllWork = function(doc) {
       // if only one result, wrap it in an array
       if (!elementHasMany(doc[this._plural]))
         doc[this._plural][this._singular] = [doc[this._plural][this._singular]];
@@ -121,34 +134,46 @@ extend(Base.prototype, {
       return results; 
     }.bind(this);
     
-    findOneTransform = function(doc) {
+    findOneWork = function(doc) {
       attributes = this._attributesFromTree(doc[this._singular]);
       return this.build(attributes);
     }.bind(this);
     
     if (id == "first" || id == "all") {
       var url = this._plural_url();
-      return Base.request(findAllTransform, url, callback);
+      return Base.parseHTTP(findAllWork, url, callback);
     }
     else {
       if (isNaN(parseInt(id))) return null;
       url = this._singular_url(id);
-      return Base.request(findOneTransform, url, callback);
+      return Base.parseHTTP(findOneWork, url, callback);
     }
   },
   
-  reload : function() {
-    if (this.id) {
-      var copy = this.find(this.id);
+  reload : function(callback) {
+    reloadWork = function(copy) {
       for (var i=0; i<copy.properties.length; i++)
         this._setProperty(copy.properties[i], copy[copy.properties[i]]);
       for (var i=0; i<copy.associations.length; i++)
         this._setAssociation(copy.associations[i], copy[copy.associations[i]]);
+  
+      if (callback)
+        return callback(this);
+      else
+        return this;
+    }.bind(this);
+    
+    if (this.id) {
+      if (callback)
+        this.find(this.id, reloadWork);
+      else
+        return reloadWork(this.find(this.id));
     }
-    return this;
+    else
+      return this;
   },
   
-  // This function would be named "new", if 
+  // This function would be named "new", if JavaScript in IE allowed that.
   build : function(attributes, name, prefix, singular, plural) {
     var base;
     if (name)
@@ -160,33 +185,87 @@ extend(Base.prototype, {
     return base;
   },
   
-  create : function(attributes) {
+  create : function(attributes, callback) {
     var base = this.build(attributes);
-    base.save();
     
-    return base;
+    createWork = function(saved) {
+      if (callback)
+        return callback(base);
+      else
+        return base;
+    }.bind(this);
+    
+    if (callback)
+      base.save(createWork);
+    else
+      return createWork(base.save());
   },
   
   // If not given an ID, destroys itself, if it has an ID.  If given an ID, destroys that record.
-  destroy : function(given_id) {
+  // You can call destroy(), destroy(1), destroy(callback()), or destroy(1, callback()), and it works as you expect.
+  destroy : function(given_id, callback) {
+    if (typeof(given_id) == "function") {
+      callback = given_id;
+      given_id = null;
+    }
     var id = given_id || this.id;
     if (!id) return false;
     
-    var req = new Ajax.Request(this._singular_url(id), {
-      method: "delete",
-      asynchronous: false
-    });
+    destroyWork = function(transport) {
+      if (transport.status == 200) {
+        if (!given_id || this.id == given_id)
+          this.id = null;
+        return this;
+      }
+      else
+        return false;
+    }.bind(this);
     
-    if (req.transport.status == 200) {
-      if (!given_id || this.id == given_id)
-        this.id = null;
-      return this;
-    }
-    else
-      return false;
+    return Base.request(destroyWork, this._singular_url(id), {method: "delete"}, callback);
   },
   
-  save : function() {
+  save : function(callback) {
+    saveWork = function(transport) {
+      var saved = false;
+
+      // create response
+      if (this.new_record()) {
+        if (transport.status == 201) {
+          loc = transport.getResponseHeader("location");
+          if (loc) {
+            id = loc.match(/\/([^\/]*?)(\.\w+)?$/)[1];
+            if (id) {
+              this.id = parseInt(id);
+              saved = true;
+            }
+          }
+        }
+        // check for errors
+        else if (transport.status == 200) {
+          if (transport.responseText) {
+            var doc = Base.tree.parseXML(transport.responseText);
+            if (doc.errors)
+              this._setErrors(this._errorsFromTree(doc.errors));
+          }
+        }
+      }
+      // update response
+      else {
+        if (transport.status == 200) {
+          saved = true;
+          // check for errors
+          if (transport.responseText) {
+            var doc = Base.tree.parseXML(transport.responseText);
+            if (doc.errors) {
+              this._setErrors(this._errorsFromTree(doc.errors));
+              saved = false;
+            }
+          }
+        }
+      }
+      
+      return saved;
+    }.bind(this);
   
     // reset errors
     this._setErrors([]);
@@ -211,52 +290,7 @@ extend(Base.prototype, {
     }.bind(this));
     
     // send the request
-    var req = new Ajax.Request(url, {
-      parameters: params,
-      method: method,
-      asynchronous: false
-    });
-    
-    var status = req.transport.status;
-    var saved = false;
-    
-    // create response
-    if (this.new_record()) {
-      if (status == 201) {
-        loc = req.getHeader("location");
-        if (loc) {
-          id = loc.match(/\/([^\/]*?)(\.\w+)?$/)[1];
-          if (id) {
-            this.id = parseInt(id);
-            saved = true;
-          }
-        }
-      }
-      // check for errors
-      else if (status == 200) {
-        if (req.transport.responseText) {
-          var doc = Base.tree.parseXML(req.transport.responseText);
-          if (doc.errors)
-            this._setErrors(this._errorsFromTree(doc.errors));
-        }
-      }
-    }
-    // update response
-    else {
-      if (status == 200) {
-        saved = true;
-        // check for errors
-        if (req.transport.responseText) {
-          var doc = Base.tree.parseXML(req.transport.responseText);
-          if (doc.errors) {
-            this._setErrors(this._errorsFromTree(doc.errors));
-            saved = false;
-          }
-        }
-      }
-    }
-    
-    return saved;
+    return Base.request(saveWork, url, {parameters: params, method: method}, callback);
   },
   
   // mimics ActiveRecord's behavior of omitting associations, but keeping foreign keys

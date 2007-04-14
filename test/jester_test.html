@@ -72,23 +72,27 @@ function setUp () {
       'user' : ericDetails
     }
   }
+  
+  // initiate models
+  Base.model("User")
+  Base.model("Post")
+  
+  Internet = {}
+  Internet[User._singular_url(1)] = {'user': ericDetails};
+  Internet[Post._singular_url(1)] = {'post': postDetails1};
+  Internet[User._plural_url()] = allUsersDetails;
 
   // used to make sure callbacks get called
   changed = false;
   change = function() {changed = true;}
   
-  // initiate models
-  Base.model("User")
-  Base.model("Post")
   Base.tree.parseHTTP = function (url, options, callback) {
-    if (url == User._singular_url(1))
-      return {'user': ericDetails}
-    else if (url == Post._singular_url(1))
-      return {'post': postDetails1}
-    else if (url == User._plural_url())
-      return allUsersDetails;
-  }
-  
+    call = function(doc) {change(); return callback(doc);}
+    if (callback)
+      return call(Internet[url]);
+    else
+      return Internet[url];
+  }  
 }
 
 
@@ -97,13 +101,10 @@ function setUp () {
  ********************************************/
 
 function testFind () {
-  Base.model('User', 'http://www.thoughtbot.com');
-
 	var eric = User.find(1);
 	assertEquals('User', eric._name)
 	assertEquals('user', eric._singular);
 	assertEquals('users', eric._plural);
-	assertEquals('http://www.thoughtbot.com', eric._prefix);
 	assertEquals(1, eric.id);
 	assertEquals('eric', eric.first_name);
 	// test date parsing
@@ -118,63 +119,71 @@ function testFind () {
 	assertEquals('the body', eric.posts[0].body);
 	assertEquals('another title', eric.posts[1].title);
 	assertEquals('another body', eric.posts[1].body);
+	
+	User.find(1, function(eric) {
+    assertEquals(1, eric.id);
+    assertEquals('eric', eric.first_name);
+    assert(changed);
+  });
+	
 }
 
-function testFindAll () {
-  var User = new Base('User');
-  Base.tree = { parseHTTP :
-    function (url, options, callback) {
-      if (url == User._plural_url())
-        return allUsersDetails;
-      else if (url == User._singular_url(1))
-        return {'user': ericDetails};
-    }
-  }
-  
+function testFindAll () {  
   var users = User.find('all');
   assertEquals(3, users.length);
   
   var eric = User.find(1);
   for (var i =0; i<eric.properties.length; i++)
     assertEquals(eric.properties[i], users[0].properties[i]);
-    
   assertEquals(eric.first_name, users[0].first_name);
   assertEquals(eric.constructor, users[0].constructor);
   for (var i=0; i<3; i++)
     assertEquals(i+1, users[i].id)
   
-  Base.tree = { parseHTTP :
-    function (url, options, callback) {
-      return allWithOneUserDetails;
-    }
-  }
-  
+  User.find('all', function(users) {
+    assertEquals(3, users.length);
+    assertEquals(eric.constructor, users[0].constructor);
+    assert(changed);
+  });
+    
+  // test that there's no issue with one element arrays in XML
+  Internet[User._plural_url()] = allWithOneUserDetails;
   var users = User.find("all");
   assertEquals(1, users.length);
 }
 
+function testFindFirst () {
+  var eric = User.find('first');
+  var eric2 = User.find(1);
+  
+  assertEquals(eric.first_name, eric2.first_name);
+  assertEquals(eric.constructor, eric2.constructor);
+  
+  User.find('first', function(eric) {
+    assertEquals(eric.first_name, eric2.first_name);
+    assertEquals(eric.constructor, eric2.constructor);
+    assert(changed);
+  });
+  
+}
+
 // reload is a find operation
 function testReload () {
-  var User = new Base('User', 'http://www.thoughtbot.com');
-  Base.tree = { parseHTTP : 
-    function (url, options, callback) {
-      if (url == User._singular_url(1))
-        return {'user': ericDetails}
-    }
-  }
   var eric = User.find(1)
-  assertEquals("eric", eric.first_name)
   
   // fake that the user details got updated
-  Base.tree = { parseHTTP : 
-    function (url, options, callback) {
-      if (url == User._singular_url(1))
-        return {'user': johnDetails}
-    }
-  }
+  Internet[User._singular_url(1)] = {'user': johnDetails}
   
   eric.reload();
   assertEquals("john", eric.first_name)
+  
+  // switch back
+  Internet[User._singular_url(2)] = {'user': ericDetails}
+  
+  eric.reload(function(ignoreMe) {
+    assertEquals("eric", eric.first_name)
+    assert(changed);
+  });
 }
 
 /********************************************
@@ -257,6 +266,14 @@ function testInvalidSave () {
 function testDestroy () {
   var eric = User.build({id: 1})
 	Ajax = { Request : function (url, options) { 
+	    this.transport = { status : 500 };
+	  }
+	}
+	assert(! eric.destroy());
+	assertEquals(1, eric.id);
+  
+  var eric = User.build({id: 1})
+	Ajax = { Request : function (url, options) { 
 	    this.transport = { status : 200 };
 	  }
 	}
@@ -264,14 +281,11 @@ function testDestroy () {
 	assertNull(eric.id);
 
   var eric = User.build({id: 1})
-	Ajax = { Request : function (url, options) { 
-	    this.transport = { status : 500 };
-	  }
-	}
-	assert(! eric.destroy());
-	assertEquals(1, eric.id);
-	
-	
+  eric.destroy(function(result) {
+    assertEquals(eric, eric.destroy());
+    assertNull(eric.id);
+    assert(changed);
+  });	
 }
 
 function testSaveNewRecord () {
@@ -287,6 +301,13 @@ function testSaveNewRecord () {
 
 	assert(eric.save());
 	assertEquals(1, eric.id);
+	
+	var eric = User.build({ 'first_name' : 'eric' });
+	eric.save(function(saved) {
+    assert(saved);
+    assertEquals(1, eric.id);
+    assert(changed);
+  });
 }
 
 function testSaveExistingRecord () {
@@ -298,6 +319,11 @@ function testSaveExistingRecord () {
 	}}
 
 	assert(eric.save());
+	
+	eric.save(function(saved) {
+    assert(saved);
+    assert(changed);
+  });
 }
 
 
