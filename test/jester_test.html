@@ -73,13 +73,18 @@ function setUp () {
     }
   }
 
-  // used as a flag to make sure callbacks get called
+  // used to make sure callbacks get called
   changed = false;
+  change = function() {changed = true;}
   
+  // initiate models
   Base.model("User")
+  Base.model("Post")
   Base.tree.parseHTTP = function (url, options, callback) {
     if (url == User._singular_url(1))
       return {'user': ericDetails}
+    else if (url == Post._singular_url(1))
+      return {'post': postDetails1}
     else if (url == User._plural_url())
       return allUsersDetails;
   }
@@ -91,7 +96,7 @@ function setUp () {
  ************ FIND TESTS ********************
  ********************************************/
 
-function testShouldFindTheRecordWithTheGivenIdWhenSentFind () {
+function testFind () {
   Base.model('User', 'http://www.thoughtbot.com');
 
 	var eric = User.find(1);
@@ -113,16 +118,9 @@ function testShouldFindTheRecordWithTheGivenIdWhenSentFind () {
 	assertEquals('the body', eric.posts[0].body);
 	assertEquals('another title', eric.posts[1].title);
 	assertEquals('another body', eric.posts[1].body);
-	
-	// Simulate jester_utils not being loaded
-	var parse = Date.parse;
-	Date.parse = function() {return NaN;}
-	var eric = User.find(1)
-	assertEquals("string", typeof(eric.created_at))
-	Date.parse = parse; // restore Date.parse
 }
 
-function testShouldFindAllRecordsWhenSentFindAll () {
+function testFindAll () {
   var User = new Base('User');
   Base.tree = { parseHTTP :
     function (url, options, callback) {
@@ -156,7 +154,7 @@ function testShouldFindAllRecordsWhenSentFindAll () {
 }
 
 // reload is a find operation
-function testReloadShouldRefindObject () {
+function testReload () {
   var User = new Base('User', 'http://www.thoughtbot.com');
   Base.tree = { parseHTTP : 
     function (url, options, callback) {
@@ -183,7 +181,7 @@ function testReloadShouldRefindObject () {
  ************ ASSOCIATION TESTS *************
  ********************************************/
  
-function testRelationsWorkWithHasManyAndHasOne () {
+function testRelations () {
   var User = new Base('User');
   Base.tree = { parseHTTP :
     function (url, options, callback) {
@@ -204,10 +202,10 @@ function testRelationsWorkWithHasManyAndHasOne () {
 
 
 /********************************************
- ************ VALIDATION TESTS ********************
+ ************ VALIDATION TESTS **************
  ********************************************/
 
-function testShouldSayTheGivenObjectIsValidIfItDoesNotHaveAnyErrorsWhenSentValid () {
+function testValidCheck () {
   var User = new Base('User');
   var user = User.build();
   
@@ -216,30 +214,7 @@ function testShouldSayTheGivenObjectIsValidIfItDoesNotHaveAnyErrorsWhenSentValid
   assert(! user.valid());
 }
 
-function testShouldSeeTheObjectsErrorsFromTheGivenErrorsElementsWhenMadeFromTree () {
-	var User = new Base('User');
-	
-	var errorTree = { 'error' : ["Name can't be blank", "City can't be blank"] }
-	var errors = User._errorsFromTree(errorTree);
-	
-	assertEquals(2, errors.length);
-	assertEquals("Name can't be blank", errors[0]);
-	assertEquals("City can't be blank", errors[1]);
-}
-
-function testShouldSetTheObjectsErrorsWithTheGivenArrayOfErrorsWhenSentSetErrors () {
-  var errors = ["Name can't be blank", "City can't be blank"]
-	var user = new Base('User');
-  assert(user.valid());
-
-	user._setErrors(errors);
-	assert(!user.valid());
-	assertEquals(2, user.errors.length);
-	assertEquals("Name can't be blank", errors[0]);
-	assertEquals("City can't be blank", errors[1]);
-}
-
-function testShouldFillItsErrorsCollectionIfItsInvalidWhenSentSave() {
+function testInvalidSave () {
   var user = new Base('User');
   user._setProperties({ 'first_name' : '' });
   assert(user.new_record());
@@ -280,31 +255,28 @@ function testShouldFillItsErrorsCollectionIfItsInvalidWhenSentSave() {
  ********************************************/
 
 function testDestroy () {
-  var user = new Base('User');
-	user.id = 1
+  var eric = User.build({id: 1})
 	Ajax = { Request : function (url, options) { 
 	    this.transport = { status : 200 };
 	  }
 	}
-	assertEquals(user, user.destroy());
-	assertNull(user.id);
+	assertEquals(eric, eric.destroy());
+	assertNull(eric.id);
 
-  var user = new Base('User');
-	user.id = 1
+  var eric = User.build({id: 1})
 	Ajax = { Request : function (url, options) { 
 	    this.transport = { status : 500 };
 	  }
 	}
-	assert(! user.destroy());
-	assertEquals(1, user.id);
+	assert(! eric.destroy());
+	assertEquals(1, eric.id);
 	
 	
 }
 
 function testSaveNewRecord () {
-  var user = new Base('User');
-  user.build({ 'first_name' : 'eric' });
-  assert(user.new_record());
+  var eric = User.build({ 'first_name' : 'eric' });
+  assert(eric.new_record());
 
   Ajax = { Request : function (url, options) {
     this.transport = {
@@ -313,20 +285,19 @@ function testSaveNewRecord () {
     };
   }}
 
-	assert(user.save());
-	assertEquals(1, user.id);
+	assert(eric.save());
+	assertEquals(1, eric.id);
 }
 
 function testSaveExistingRecord () {
-  var User = new Base('User');
-	user = User.build({ 'id' : '1', 'first_name' : 'eric' });
-	assert(! user.new_record());
+	var eric = User.build({ 'id' : '1', 'first_name' : 'eric' });
+	assert(! eric.new_record());
 
 	Ajax = { Request : function (url, options) {
 	  this.transport = { status : 200 };
 	}}
 
-	assert(user.save());
+	assert(eric.save());
 }
 
 
@@ -334,8 +305,8 @@ function testSaveExistingRecord () {
  ************ INTERNAL TESTS ****************
  ********************************************/
 
-function testShouldSetTheObjectsPropertiesToTheGivenPropertiesWhenSentSetProperties () {
-  var eric = new Base('User');
+function testSetProperties () {
+  var eric = User.build()
 	assertUndefined(eric.first_name);
 
 	eric._setProperties({ 'first_name' : 'eric' });
@@ -344,8 +315,18 @@ function testShouldSetTheObjectsPropertiesToTheGivenPropertiesWhenSentSetPropert
 	assertEquals('first_name', eric.properties[0]);
 }
 
-function testShouldGenerateAndStoreTheGivenClassNamesSingularAndPluralVersionsAndUseTheCurrentUrlAsTheUrlPrefixWhenConstructingABaseObject () {
-  Base.model('User');
+function testSetAssociations () {
+  var eric = User.build()
+	assertUndefined(eric.posts);
+	var posts = [Post.find(1)]
+
+	eric._setAssociations({ 'posts' : posts });
+	assertEquals(posts, eric.posts);
+	assertEquals(1, eric.associations.length);
+	assertEquals('posts', eric.associations[0]);
+}
+
+function testNameAccessors () {
   assertEquals('User', User._name);
 	assertEquals('user', User._singular);
 	assertEquals('users', User._plural);
@@ -353,7 +334,7 @@ function testShouldGenerateAndStoreTheGivenClassNamesSingularAndPluralVersionsAn
 	assert(User.errors.length == 0);
 }
       
-function testShouldUseTheGivenUrlPrefixWhenConstructingABaseObject () {
+function testPrefix () {
   Base.model('User', 'http://www.thoughtbot.com');
   assertEquals('http://www.thoughtbot.com', User._prefix);
 
@@ -364,7 +345,7 @@ function testShouldUseTheGivenUrlPrefixWhenConstructingABaseObject () {
   assertEquals(default_prefix() + '/public/forum', User._prefix);
 }
 
-function testShouldUseTheGivenSingularAndPluralClassNamesWhenConstructingABaseObject () {
+function testPluralization () {
   // base case
   Base.model('Person', null);
   assertEquals('person', Person._singular);
@@ -381,26 +362,47 @@ function testShouldUseTheGivenSingularAndPluralClassNamesWhenConstructingABaseOb
   assertEquals('persons', Person._plural);
 }
 
-function testShouldReturnTheSingularUrlWhenSentSingularUrl () {
-  var user = new Base('User', 'http://www.thoughtbot.com');
-  user.id = 1;
-  assertEquals('http://www.thoughtbot.com/users/1.xml', user._singular_url());
+function testSingularUrl () {
+  Base.model('User', 'http://www.thoughtbot.com');
+  var eric = User.build({id: 1})
+  assertEquals('http://www.thoughtbot.com/users/1.xml', eric._singular_url());
   
   // test version to generate singular urls for any id
-  assertEquals('http://www.thoughtbot.com/users/2.xml', user._singular_url(2));
+  assertEquals('http://www.thoughtbot.com/users/2.xml', eric._singular_url(2));
 }
 
-function testShouldReturnThePluralUrlWhenSentPluralUrl () {
-  var User = new Base('User', 'http://www.thoughtbot.com');
+function testPluralUrl () {
+  Base.model('User', 'http://www.thoughtbot.com');
   assertEquals('http://www.thoughtbot.com/users.xml', User._plural_url());
 }
 
-function testShouldSayAGivenObjectIsNewIfItDoesNotHaveAnIdWhenSentNewRecord () {
-  var user = new Base('User');
-  assert(user.new_record());
+function testNewRecordCheck () {
+  var eric = User.build();
+  assert(eric.new_record());
   
-  user.id = 1;
-  assert(! user.new_record());
+  eric.id = 1;
+  assert(! eric.new_record());
+}
+
+function testErrorsFromTree () {
+	var errorTree = { 'error' : ["Name can't be blank", "City can't be blank"] }
+	var errors = User._errorsFromTree(errorTree);
+	
+	assertEquals(2, errors.length);
+	assertEquals("Name can't be blank", errors[0]);
+	assertEquals("City can't be blank", errors[1]);
+}
+
+function testSetErrors () {
+  var errors = ["Name can't be blank", "City can't be blank"]
+	var eric = new Base('User');
+  assert(eric.valid());
+
+	eric._setErrors(errors);
+	assert(!eric.valid());
+	assertEquals(2, eric.errors.length);
+	assertEquals("Name can't be blank", eric.errors[0]);
+	assertEquals("City can't be blank", eric.errors[1]);
 }
 
     </script>
