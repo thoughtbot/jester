@@ -72,9 +72,17 @@ function setUp () {
       'user' : ericDetails
     }
   }
-  
+
   // used as a flag to make sure callbacks get called
   changed = false;
+  
+  Base.model("User")
+  Base.tree.parseHTTP = function (url, options, callback) {
+    if (url == User._singular_url(1))
+      return {'user': ericDetails}
+    else if (url == User._plural_url())
+      return allUsersDetails;
+  }
   
 }
 
@@ -84,13 +92,7 @@ function setUp () {
  ********************************************/
 
 function testShouldFindTheRecordWithTheGivenIdWhenSentFind () {
-  var User = new Base('User', 'http://www.thoughtbot.com');
-  Base.tree = { parseHTTP : 
-    function (url, options, callback) {
-      if (url == User._singular_url(1))
-        return {'user': ericDetails}
-    }
-  }
+  Base.model('User', 'http://www.thoughtbot.com');
 
 	var eric = User.find(1);
 	assertEquals('User', eric._name)
@@ -243,12 +245,10 @@ function testShouldFillItsErrorsCollectionIfItsInvalidWhenSentSave() {
   assert(user.new_record());
 
   Ajax = { Request : function (url, options) {
-	  this.transport = { status : 200,
-	    responseText : "<errors><error>First name can't be blank</error></errors>",
+	  this.transport = { 
+      status : 200,
+	    responseText : "<errors><error>First name can't be blank</error></errors>"
 	  };
-	  this.getHeader = function (header) {
-	    return 'http://www.thoughtbot.com/users/1';
-	  }
 	}}
 
 	assert(! user.save());
@@ -261,12 +261,10 @@ function testShouldFillItsErrorsCollectionIfItsInvalidWhenSentSave() {
 	assert(! user.new_record());
 
 	Ajax = { Request : function (url, options) {
-	  this.transport = { status : 200,
-	    responseText : "<errors><error>First name can't be blank</error></errors>",
+	  this.transport = { 
+	    status : 200,
+	    responseText : "<errors><error>First name can't be blank</error></errors>"
 	  };
-	  this.getHeader = function (header) {
-	    return 'http://www.thoughtbot.com/users/1';
-	  }
   }}
 
 	assert(! user.save());
@@ -281,7 +279,7 @@ function testShouldFillItsErrorsCollectionIfItsInvalidWhenSentSave() {
  ************ CRUD TESTS ********************
  ********************************************/
 
-function testShouldDestroyItselfWhenSentDestroy () {
+function testDestroy () {
   var user = new Base('User');
 	user.id = 1
 	Ajax = { Request : function (url, options) { 
@@ -299,34 +297,33 @@ function testShouldDestroyItselfWhenSentDestroy () {
 	}
 	assert(! user.destroy());
 	assertEquals(1, user.id);
+	
+	
 }
 
-function testShouldCreateANewRecordIfItsANewObjectWhenSentSave () {
+function testSaveNewRecord () {
   var user = new Base('User');
   user.build({ 'first_name' : 'eric' });
   assert(user.new_record());
 
   Ajax = { Request : function (url, options) {
-    this.transport = { status : 201 };
-    this.getHeader = function (header) {
-      return 'http://www.thoughtbot.com/users/1';
-    }
+    this.transport = {
+      status : 201,
+      getResponseHeader : function (header) {return 'http://www.thoughtbot.com/users/1';}
+    };
   }}
 
 	assert(user.save());
 	assertEquals(1, user.id);
 }
 
-function testShouldUpdateAnExistingRecordIfItsAnExistingObjectWhenSentSave () {
+function testSaveExistingRecord () {
   var User = new Base('User');
 	user = User.build({ 'id' : '1', 'first_name' : 'eric' });
 	assert(! user.new_record());
 
 	Ajax = { Request : function (url, options) {
 	  this.transport = { status : 200 };
-	  this.getHeader = function (header) {
-	    return 'http://www.thoughtbot.com/users/1';
-	  }
 	}}
 
 	assert(user.save());
