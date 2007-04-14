@@ -72,8 +72,8 @@ function Base(name, prefix, singular, plural) {
     this._prefix = default_prefix();
   
   // Initialize no attributes, no associations
-  this.properties = [];
-  this.associations = [];
+  this._properties = [];
+  this._associations = [];
   
   // Initialize with no errors
   this.errors = [];
@@ -152,10 +152,10 @@ extend(Base.prototype, {
   
   reload : function(callback) {
     reloadWork = function(copy) {
-      for (var i=0; i<copy.properties.length; i++)
-        this._setProperty(copy.properties[i], copy[copy.properties[i]]);
-      for (var i=0; i<copy.associations.length; i++)
-        this._setAssociation(copy.associations[i], copy[copy.associations[i]]);
+      for (var i=0; i<copy._properties.length; i++)
+        this._setProperty(copy._properties[i], copy[copy._properties[i]]);
+      for (var i=0; i<copy._associations.length; i++)
+        this._setAssociation(copy._associations[i], copy[copy._associations[i]]);
   
       if (callback)
         return callback(this);
@@ -285,7 +285,7 @@ extend(Base.prototype, {
     
     // collect params
     var params = {};
-    (this.properties).each(function(value, i) {
+    (this._properties).each(function(value, i) {
       params[this._singular + "[" + value + "]"] = this[value];
     }.bind(this));
     
@@ -296,8 +296,8 @@ extend(Base.prototype, {
   // mimics ActiveRecord's behavior of omitting associations, but keeping foreign keys
   attributes : function() {
     attributes = {}
-    for (var i=0; i<this.properties.length; i++)
-      attributes[this.properties[i]] = this[this.properties[i]];
+    for (var i=0; i<this._properties.length; i++)
+      attributes[this._properties[i]] = this[this._properties[i]];
     return attributes;
   },
     
@@ -421,14 +421,14 @@ extend(Base.prototype, {
       
   _setProperty : function(property, value) {  
     this[property] = value;
-    if (!(this.properties.include(property)))
-      this.properties.push(property);  
+    if (!(this._properties.include(property)))
+      this._properties.push(property);  
   },
   
   _setAssociation : function(association, value) {
     this[association] = value;
-    if (!(this.associations.include(association)))
-      this.associations.push(association);
+    if (!(this._associations.include(association)))
+      this._associations.push(association);
   },
   
   _clear : function() {
@@ -437,15 +437,15 @@ extend(Base.prototype, {
   },
   
   _clearProperties : function() {
-    for (var i=0; i<this.properties.length; i++)
-      this[this.properties[i]] = null;
-    this.properties = [];
+    for (var i=0; i<this._properties.length; i++)
+      this[this._properties[i]] = null;
+    this._properties = [];
   },
   
   _clearAssociations : function() {
-    for (var i=0; i<this.associations.length; i++)
-      this[this.associations[i]] = null;
-    this.associations = [];
+    for (var i=0; i<this._associations.length; i++)
+      this[this._associations[i]] = null;
+    this._associations = [];
   },
   
   // helper URLs

@@ -133,8 +133,8 @@ function testFindAll () {
   assertEquals(3, users.length);
   
   var eric = User.find(1);
-  for (var i =0; i<eric.properties.length; i++)
-    assertEquals(eric.properties[i], users[0].properties[i]);
+  for (var i =0; i<eric._properties.length; i++)
+    assertEquals(eric._properties[i], users[0]._properties[i]);
   assertEquals(eric.first_name, users[0].first_name);
   assertEquals(eric.constructor, users[0].constructor);
   for (var i=0; i<3; i++)
@@ -337,8 +337,8 @@ function testSetProperties () {
 
 	eric._setProperties({ 'first_name' : 'eric' });
 	assertEquals('eric', eric.first_name);
-	assertEquals(1, eric.properties.length);
-	assertEquals('first_name', eric.properties[0]);
+	assertEquals(1, eric._properties.length);
+	assertEquals('first_name', eric._properties[0]);
 }
 
 function testSetAssociations () {
@@ -348,8 +348,8 @@ function testSetAssociations () {
 
 	eric._setAssociations({ 'posts' : posts });
 	assertEquals(posts, eric.posts);
-	assertEquals(1, eric.associations.length);
-	assertEquals('posts', eric.associations[0]);
+	assertEquals(1, eric._associations.length);
+	assertEquals('posts', eric._associations[0]);
 }
 
 function testNameAccessors () {
