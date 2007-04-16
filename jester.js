@@ -314,7 +314,7 @@ extend(Base.prototype, {
           value = (value == "true");
         else if (elements[attr]["@type"] == "datetime") {
           date = Date.parse(value);
-          if (!isNaN(date)) value = date; // date will be NaN if jester_utils isn't loaded
+          if (!isNaN(date)) value = date;
         }
       }
       // handle arrays (associations)
