@@ -54,11 +54,7 @@ function Base(name, prefix, singular, plural) {
   else
     this._singular = name.toLowerCase();
   
-  if (this._singular.pluralize) // if jester_utils is loaded
-    this._plural = this._singular.pluralize(plural);
-  else
-    this._plural = this._singular + "s";
-    
+  this._plural = this._singular.pluralize(plural);    
   
   // Establish prefix
   default_prefix = function() {return "http://" + window.location.hostname + (window.location.port ? ":" + window.location.port : "");}
@@ -120,7 +116,7 @@ extend(Base.prototype, {
   find : function(id, callback) {
     findAllWork = function(doc) {
       // if only one result, wrap it in an array
-      if (!elementHasMany(doc[this._plural]))
+      if (!Base.elementHasMany(doc[this._plural]))
         doc[this._plural][this._singular] = [doc[this._plural][this._singular]];
       
       var results = doc[this._plural][this._singular].map(function(elem) {
@@ -295,7 +291,7 @@ extend(Base.prototype, {
   
   // mimics ActiveRecord's behavior of omitting associations, but keeping foreign keys
   attributes : function() {
-    attributes = {}
+    var attributes = {}
     for (var i=0; i<this._properties.length; i++)
       attributes[this._properties[i]] = this[this._properties[i]];
     return attributes;
@@ -457,7 +453,7 @@ extend(Base.prototype, {
 // Returns true if the element has more objects beneath it, or just 1 or more attributes.
 // It's not perfect, this would mess up if an object had only one attribute, and it was an array.
 // For now, this is just one of the difficulties of dealing with ObjTree.
-elementHasMany = function(element) {
+Base.elementHasMany = function(element) {
   var i = 0;
   var singular = null;
   var has_many = false;
