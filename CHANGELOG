@@ -1,0 +1,11 @@
+Version 1.1 (April 16th)
+  * Asynchronous support.
+  * find('all'), find('first') - works like ActiveRecord.
+  * attributes() - works like ActiveRecord.
+  * reload() - works like ActiveRecord.
+  * Pluralization, a proper Inflector library. (Thanks to Ryan Schuft!)
+  * Cleaned up and expanded JsUnit tests.
+  * Significant code cleanup and prettifying.
+
+Version 1.0 (April 2nd)
+  * Initial release.

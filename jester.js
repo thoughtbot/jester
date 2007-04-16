@@ -2,8 +2,11 @@
 
 Jester is a JavaScript implementation of REST, modeled after ActiveResource.
 
-More details can be found at:
+For more details, see:
 http://giantrobots.thoughtbot.com/2007/4/2/jester-javascriptian-rest
+
+and:
+http://giantrobots.thoughtbot.com/2007/4/16/jester-1-1-asynchronous-and-more
 
 */
 
