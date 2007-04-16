@@ -8,7 +8,6 @@
     <script language="JavaScript" type="text/javascript" src="jsunit/app/jsUnitCore.js"></script>
     <script language="JavaScript" type="text/javascript" src="../prototype.js"></script>
     <script language="JavaScript" type="text/javascript" src="../ObjTree.js"></script>
-    <script language="JavaScript" type="text/javascript" src="../date.js"></script>
     <script language="JavaScript" type="text/javascript" src="../jester.js"></script>
   </head>
 
@@ -107,10 +106,6 @@ function testFind () {
 	assertEquals('users', eric._plural);
 	assertEquals(1, eric.id);
 	assertEquals('eric', eric.first_name);
-	// test date parsing
-	assertEquals(Date, eric.created_at.constructor)
-	assertEquals(2007, eric.created_at.getFullYear())
-	assertEquals(3, eric.created_at.getMonth())
 	assert(eric.admin);
 
 	assertEquals(2, eric.posts.length);
