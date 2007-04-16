@@ -73,7 +73,7 @@ Base.request = function(callback, url, options, user_callback) {
   
   if (options.asynchronous) {
     options.onComplete = function(transport) {user_callback(callback(transport));}
-    return new Ajax.Request(url, options);
+    return new Ajax.Request(url, options).transport;
   }
   else
     return callback(new Ajax.Request(url, options).transport);
@@ -135,7 +135,7 @@ extend(Base.prototype, {
     
     if (this.id) {
       if (callback)
-        this.find(this.id, reloadWork);
+        return this.find(this.id, reloadWork);
       else
         return reloadWork(this.find(this.id));
     }
@@ -166,7 +166,7 @@ extend(Base.prototype, {
     }.bind(this);
     
     if (callback)
-      base.save(createWork);
+      return base.save(createWork);
     else
       return createWork(base.save());
   },
