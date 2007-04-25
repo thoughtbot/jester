@@ -7,7 +7,6 @@
     <title>jester.js</title>
     <script language="JavaScript" type="text/javascript" src="jsunit/app/jsUnitCore.js"></script>
     <script language="JavaScript" type="text/javascript" src="../prototype.js"></script>
-    <script language="JavaScript" type="text/javascript" src="../ObjTree.js"></script>
     <script language="JavaScript" type="text/javascript" src="../jester.js"></script>
   </head>
 
@@ -78,20 +77,25 @@ function setUp () {
   
   Internet = {}
   Internet[User._singular_url(1)] = {'user': ericDetails};
+  Internet[User._singular_url(2)] = {'user': johnDetails};
+  Internet[User._singular_url(3)] = {'user': chadDetails};
   Internet[Post._singular_url(1)] = {'post': postDetails1};
+  Internet[Post._singular_url(2)] = {'post': postDetails2};
+  Internet[Post._singular_url(3)] = {'post': postDetails3};
   Internet[User._plural_url()] = allUsersDetails;
+  Internet[Post._plural_url()] = allPostsDetails;
 
   // used to make sure callbacks get called
   changed = false;
   change = function() {changed = true;}
   
-  Base.tree.parseHTTP = function (url, options, callback) {
+  Base.requestXML = function (callback, url, options, user_callback) {
     call = function(doc) {change(); return callback(doc);}
     if (callback)
       return call(Internet[url]);
     else
       return Internet[url];
-  }  
+  }
 }
 
 
@@ -186,22 +190,11 @@ function testReload () {
  ********************************************/
  
 function testRelations () {
-  var User = new Base('User');
-  Base.tree = { parseHTTP :
-    function (url, options, callback) {
-      if (url == User._singular_url(1))
-        return {'user': ericDetails};
-      else if (url == User._singular_url(2))
-        return {'user': johnDetails};
-    }
-  }
-  
   var eric = User.find(1);
   assertEquals(2, eric.posts.length);
   
   var john = User.find(2);
   assertEquals(1, john.posts.length);
-  
 }
 
 
@@ -210,7 +203,6 @@ function testRelations () {
  ********************************************/
 
 function testValidCheck () {
-  var User = new Base('User');
   var user = User.build();
   
   assert(user.valid());
@@ -219,7 +211,7 @@ function testValidCheck () {
 }
 
 function testInvalidSave () {
-  var user = new Base('User');
+  var user = User.build();
   user._setProperties({ 'first_name' : '' });
   assert(user.new_record());
 
@@ -235,7 +227,7 @@ function testInvalidSave () {
 	assertEquals(1, user.errors.length);
 	assertEquals("First name can't be blank", user.errors[0]);
 
-  var user = new Base('User');
+  var user = User.build();
 	user._setProperties({ 'id' : '1', 'first_name' : '' });
 	assert(! user.new_record());
 

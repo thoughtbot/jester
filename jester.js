@@ -20,7 +20,14 @@ http://giantrobots.thoughtbot.com/2007/4/2/jester-javascriptian-rest
        "public/forum" => http://www.thoughtbot.com:8080/public/forum
        "/public/forum" => http://www.thoughtbot.com:8080/public/forum
 */
-function Base(name, prefix, singular, plural) {  
+function Base(name, prefix, singular, plural) {
+  // We delay instantiating XML.ObjTree() so that it can be listed at the end of this file instead of the beginning
+  // And hey, maybe a load performance benefit too.
+  if (!Base._tree) {
+    Base._tree = new XML.ObjTree();
+    Base._tree.attr_prefix = "@";
+  }
+
   this._name = name;
   
   if (singular)
@@ -52,18 +59,17 @@ function Base(name, prefix, singular, plural) {
 // Model declaration helper
 Base.model = function(name, prefix, singular, plural) {eval(name + " = new Base(name, prefix, singular, plural);")}
 
-Base.tree = new XML.ObjTree();
-Base.tree.attr_prefix = "@";
-
-// Will soon be removed, which will jettison the major tie to Prototype
-Base.parseHTTP = function(callback, url, user_callback) {
-  if (user_callback) {
-    return Base.tree.parseHTTP(url, {}, function(doc) {
-      user_callback(callback(doc))
-    });
+// does a request that expects XML, and parses it on return before passing it back
+Base.requestXML = function(callback, url, options, user_callback) {
+  parse_and_callback = function(transport) {
+    return callback(Base._tree.parseXML(transport.responseText));
   }
-  else
-    return callback(Base.tree.parseHTTP(url, {}));
+  
+  // most XML requests are going to be a GET
+  if (!(options.postBody || options.parameters || options.postbody || options.method == "post"))
+    options.method = "get";
+    
+  return Base.request(parse_and_callback, url, options, user_callback);
 }
 
 // Helper to aid in handling either async or synchronous requests
@@ -81,7 +87,6 @@ Base.request = function(callback, url, options, user_callback) {
 
 // Logic taken from Prototype
 extend = function(object, properties) {for (var property in properties) object[property] = properties[property];}
-
 
 extend(Base.prototype, {
   new_record : function() {return !(this.id);},
@@ -111,12 +116,12 @@ extend(Base.prototype, {
     
     if (id == "first" || id == "all") {
       var url = this._plural_url();
-      return Base.parseHTTP(findAllWork, url, callback);
+      return Base.requestXML(findAllWork, url, {}, callback);
     }
     else {
       if (isNaN(parseInt(id))) return null;
       url = this._singular_url(id);
-      return Base.parseHTTP(findOneWork, url, callback);
+      return Base.requestXML(findOneWork, url, {}, callback);
     }
   },
   
@@ -213,7 +218,7 @@ extend(Base.prototype, {
         // check for errors
         else if (transport.status == 200) {
           if (transport.responseText) {
-            var doc = Base.tree.parseXML(transport.responseText);
+            var doc = Base._tree.parseXML(transport.responseText);
             if (doc.errors)
               this._setErrors(this._errorsFromTree(doc.errors));
           }
@@ -225,7 +230,7 @@ extend(Base.prototype, {
           saved = true;
           // check for errors
           if (transport.responseText) {
-            var doc = Base.tree.parseXML(transport.responseText);
+            var doc = Base._tree.parseXML(transport.responseText);
             if (doc.errors) {
               this._setErrors(this._errorsFromTree(doc.errors));
               saved = false;
@@ -484,4 +489,152 @@ if (!String.prototype.pluralize) String.prototype.pluralize = function(plural) {
     }
   }
   return str;
+};
+
+/*
+
+This is a lighter form of ObjTree, with the parts I don't use removed to keep jester.js light.
+
+// ========================================================================
+//  XML.ObjTree -- XML source code from/to JavaScript object like E4X
+// ========================================================================
+
+Copyright (c) 2005-2006 Yusuke Kawasaki. All rights reserved.
+This program is free software; you can redistribute it and/or
+modify it under the Artistic license. Or whatever license I choose,
+which I will do instead of keeping this documentation like it is.
+
+*/
+
+if ( typeof(XML) == 'undefined' ) XML = function() {};
+
+//  constructor
+XML.ObjTree = function () {
+    return this;
+};
+
+//  class variables
+XML.ObjTree.VERSION = "0.24";
+
+//  object prototype
+XML.ObjTree.prototype.xmlDecl = '<?xml version="1.0" encoding="UTF-8" ?>\n';
+XML.ObjTree.prototype.attr_prefix = '-';
+XML.ObjTree.prototype.overrideMimeType = 'text/xml';
+
+//  method: parseXML( xmlsource )
+XML.ObjTree.prototype.parseXML = function ( xml ) {
+    var root;
+    if ( window.DOMParser ) {
+        var xmldom = new DOMParser();
+//      xmldom.async = false;           // DOMParser is always sync-mode
+        var dom = xmldom.parseFromString( xml, "application/xml" );
+        if ( ! dom ) return;
+        root = dom.documentElement;
+    } else if ( window.ActiveXObject ) {
+        xmldom = new ActiveXObject('Microsoft.XMLDOM');
+        xmldom.async = false;
+        xmldom.loadXML( xml );
+        root = xmldom.documentElement;
+    }
+    if ( ! root ) return;
+    return this.parseDOM( root );
+};
+
+//  method: parseDOM( documentroot )
+XML.ObjTree.prototype.parseDOM = function ( root ) {
+    if ( ! root ) return;
+
+    this.__force_array = {};
+    if ( this.force_array ) {
+        for( var i=0; i<this.force_array.length; i++ ) {
+            this.__force_array[this.force_array[i]] = 1;
+        }
+    }
+
+    var json = this.parseElement( root );   // parse root node
+    if ( this.__force_array[root.nodeName] ) {
+        json = [ json ];
+    }
+    if ( root.nodeType != 11 ) {            // DOCUMENT_FRAGMENT_NODE
+        var tmp = {};
+        tmp[root.nodeName] = json;          // root nodeName
+        json = tmp;
+    }
+    return json;
+};
+
+//  method: parseElement( element )
+XML.ObjTree.prototype.parseElement = function ( elem ) {
+    //  COMMENT_NODE
+    if ( elem.nodeType == 7 ) {
+        return;
+    }
+
+    //  TEXT_NODE CDATA_SECTION_NODE
+    if ( elem.nodeType == 3 || elem.nodeType == 4 ) {
+        var bool = elem.nodeValue.match( /[^\x00-\x20]/ );
+        if ( bool == null ) return;     // ignore white spaces
+        return elem.nodeValue;
+    }
+
+    var retval;
+    var cnt = {};
+
+    //  parse attributes
+    if ( elem.attributes && elem.attributes.length ) {
+        retval = {};
+        for ( var i=0; i<elem.attributes.length; i++ ) {
+            var key = elem.attributes[i].nodeName;
+            if ( typeof(key) != "string" ) continue;
+            var val = elem.attributes[i].nodeValue;
+            if ( ! val ) continue;
+            key = this.attr_prefix + key;
+            if ( typeof(cnt[key]) == "undefined" ) cnt[key] = 0;
+            cnt[key] ++;
+            this.addNode( retval, key, cnt[key], val );
+        }
+    }
+
+    //  parse child nodes (recursive)
+    if ( elem.childNodes && elem.childNodes.length ) {
+        var textonly = true;
+        if ( retval ) textonly = false;        // some attributes exists
+        for ( var i=0; i<elem.childNodes.length && textonly; i++ ) {
+            var ntype = elem.childNodes[i].nodeType;
+            if ( ntype == 3 || ntype == 4 ) continue;
+            textonly = false;
+        }
+        if ( textonly ) {
+            if ( ! retval ) retval = "";
+            for ( var i=0; i<elem.childNodes.length; i++ ) {
+                retval += elem.childNodes[i].nodeValue;
+            }
+        } else {
+            if ( ! retval ) retval = {};
+            for ( var i=0; i<elem.childNodes.length; i++ ) {
+                var key = elem.childNodes[i].nodeName;
+                if ( typeof(key) != "string" ) continue;
+                var val = this.parseElement( elem.childNodes[i] );
+                if ( ! val ) continue;
+                if ( typeof(cnt[key]) == "undefined" ) cnt[key] = 0;
+                cnt[key] ++;
+                this.addNode( retval, key, cnt[key], val );
+            }
+        }
+    }
+    return retval;
+};
+
+//  method: addNode( hash, key, count, value )
+XML.ObjTree.prototype.addNode = function ( hash, key, cnts, val ) {
+    if ( this.__force_array[key] ) {
+        if ( cnts == 1 ) hash[key] = [];
+        hash[key][hash[key].length] = val;      // push
+    } else if ( cnts == 1 ) {                   // 1st sibling
+        hash[key] = val;
+    } else if ( cnts == 2 ) {                   // 2nd sibling
+        hash[key] = [ hash[key], val ];
+    } else {                                    // 3rd sibling and more
+        hash[key][hash[key].length] = val;
+    }
 };
