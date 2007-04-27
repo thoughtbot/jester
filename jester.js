@@ -82,7 +82,7 @@ extend(Base.prototype, {
   new_record : function() {return !(this.id);},
   valid : function() {return ! this.errors.any();},
   
-  find : function(id, callback) {
+  find : function(id, params, callback) {
     findAllWork = function(doc) {
       // if only one result, wrap it in an array
       if (!Base.elementHasMany(doc[this._plural]))
@@ -105,12 +105,12 @@ extend(Base.prototype, {
     }.bind(this);
     
     if (id == "first" || id == "all") {
-      var url = this._plural_url();
+      var url = this._plural_url(params);
       return Base.requestXML(findAllWork, url, {}, callback);
     }
     else {
       if (isNaN(parseInt(id))) return null;
-      url = this._singular_url(id);
+      var url = this._singular_url(id, params);
       return Base.requestXML(findOneWork, url, {}, callback);
     }
   },
@@ -127,7 +127,7 @@ extend(Base.prototype, {
     
     if (this.id) {
       if (callback)
-        return this.find(this.id, reloadWork);
+        return this.find(this.id, {}, reloadWork);
       else
         return reloadWork(this.find(this.id));
     }
@@ -398,8 +398,31 @@ extend(Base.prototype, {
   },
   
   // helper URLs
-  _singular_url : function(id) {return ((id || this.id) ? this._prefix + "/" + this._plural + "/" + (id || this.id) + ".xml" : "");},
-  _plural_url : function() {return this._prefix + "/" + this._plural + ".xml";},
+  _singular_url : function(id, params) {
+    if (typeof(id) == "object" && !params) {
+      params = id;
+      id = null;
+    }
+      
+    return ((id || this.id) ? this._prefix + "/" + this._plural + "/" + (id || this.id) + ".xml" : "") + this._queryString(params);
+  },
+  
+  _plural_url : function(params) {
+    return this._prefix + "/" + this._plural + ".xml" + this._queryString(params);
+  },
+  
+  // coming soon
+  _custom_url : function() {
+  
+  },
+  
+  _queryString : function(params) {
+    if (!params) return "";
+    string = "";
+    for (var key in params)
+      string += (string == "" ? "?" : "&") + key + "=" + params[key]
+    return string;
+  },
 
 });
 
