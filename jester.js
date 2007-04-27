@@ -291,15 +291,16 @@ extend(Base.prototype, {
       // handle scalars
       if (typeof(value) == "string" || typeof(value) == "undefined") {
         // perform any useful type transformations
-        if (elements[attr]["@type"] == "integer")
-          value = parseInt(value);
+        if (elements[attr]["@type"] == "integer") {
+          var num = parseInt(value);
+          if (!isNaN(num)) value = num;
+        }
         else if (elements[attr]["@type"] == "boolean")
           value = (value == "true");
         else if (elements[attr]["@type"] == "datetime") {
-          value = Date.parse(value);
+          var date = Date.parse(value);
+          if (!isNaN(date)) value = date;
         }
-        if (isNaN(value))
-          value = undefined;
       }
       // handle arrays (associations)
       else {
