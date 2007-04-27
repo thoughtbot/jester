@@ -1,13 +1,3 @@
-/* 
-
-Jester is a JavaScript implementation of REST, modeled after ActiveResource.
-
-For more details, see:
-http://giantrobots.thoughtbot.com/2007/4/2/jester-javascriptian-rest
-
-*/
-
-
 /* The standard way of declaring a model is:
    Base.model("User")
    This assumes "user" as a singular form, and "users" as a plural.
@@ -127,10 +117,7 @@ extend(Base.prototype, {
   
   reload : function(callback) {
     reloadWork = function(copy) {
-      for (var i=0; i<copy._properties.length; i++)
-        this._setProperty(copy._properties[i], copy[copy._properties[i]]);
-      for (var i=0; i<copy._associations.length; i++)
-        this._setAssociation(copy._associations[i], copy[copy._associations[i]]);
+      this._setAttributes(copy.attributes(true));
   
       if (callback)
         return callback(this);
@@ -203,43 +190,28 @@ extend(Base.prototype, {
     saveWork = function(transport) {
       var saved = false;
 
-      // create response
-      if (this.new_record()) {
-        if (transport.status == 201) {
-          loc = transport.getResponseHeader("location");
-          if (loc) {
-            id = loc.match(/\/([^\/]*?)(\.\w+)?$/)[1];
-            if (id) {
-              this.id = parseInt(id);
-              saved = true;
-            }
-          }
-        }
-        // check for errors
-        else if (transport.status == 200) {
-          if (transport.responseText) {
-            var doc = Base._tree.parseXML(transport.responseText);
-            if (doc.errors)
-              this._setErrors(this._errorsFromTree(doc.errors));
-          }
+      if (transport.responseText) {
+        var doc = Base._tree.parseXML(transport.responseText);
+
+        if (doc.errors)
+          this._setErrors(this._errorsFromTree(doc.errors));
+          
+        else if (doc[this._singular])
+          this._setAttributes(this._attributesFromTree(doc[this._singular]));
+      }
+
+
+      // Get ID from the location header if it's there
+      if (this.new_record() && transport.status == 201) {
+        loc = transport.getResponseHeader("location");
+        if (loc) {
+          id = parseInt(loc.match(/\/([^\/]*?)(\.\w+)?$/)[1]);
+          if (!isNaN(id))
+            this.id = id;
         }
       }
-      // update response
-      else {
-        if (transport.status == 200) {
-          saved = true;
-          // check for errors
-          if (transport.responseText) {
-            var doc = Base._tree.parseXML(transport.responseText);
-            if (doc.errors) {
-              this._setErrors(this._errorsFromTree(doc.errors));
-              saved = false;
-            }
-          }
-        }
-      }
-      
-      return saved;
+
+      return (transport.status >= 200 && transport.status < 300 && this.errors.length == 0);
     }.bind(this);
   
     // reset errors
@@ -269,10 +241,14 @@ extend(Base.prototype, {
   },
   
   // mimics ActiveRecord's behavior of omitting associations, but keeping foreign keys
-  attributes : function() {
+  attributes : function(include_associations) {
     var attributes = {}
     for (var i=0; i<this._properties.length; i++)
       attributes[this._properties[i]] = this[this._properties[i]];
+    if (include_associations) {
+      for (var i=0; i<this._associations.length; i++)
+        attributes[this._associations[i]] = this[this._associations[i]];
+    }
     return attributes;
   },
     
@@ -380,8 +356,6 @@ extend(Base.prototype, {
     }
   },
   
-  // Set attributes
-  // Force this array to be treated as attributes
   _setProperties : function(properties) {
     this._clearProperties();
     for (var prop in properties)

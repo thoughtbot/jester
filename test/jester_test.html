@@ -15,6 +15,8 @@
 
 function setUp () {
   default_prefix = function() {return "http://" + window.location.hostname + (window.location.port ? ":" + window.location.port : "");}
+  
+  ericXML = '<?xml version="1.0" encoding="UTF-8"?><user><created-at type="datetime">2007-04-08T15:12:06-04:00</created-at><id type="integer">1</id><first-name>eric</first-name><admin type="boolean">true</admin></user>'
 
   postDetails1 = { 'id' : { '@type' : 'integer', '#text' : '1' }, 'title' : 'the title', 'body' : 'the body' }
   postDetails2 = { 'id' : { '@type' : 'integer', '#text' : '2' }, 'title' : 'another title', 'body' : 'another body' }
@@ -303,7 +305,7 @@ function testSaveExistingRecord () {
 
 	Ajax = { Request : function (url, options) {
 	  this.transport = { status : 200 };
-	}}
+	}};
 
 	assert(eric.save());
 	
@@ -311,6 +313,39 @@ function testSaveExistingRecord () {
     assert(saved);
     assert(changed);
   });
+}
+
+function testSaveReloadsUponFullResponse () {
+  // new record
+  var john = User.build({'first_name' : 'john' });
+  
+  Ajax = { Request : function (url, options) {
+    this.transport = {
+      status: 201,
+      getResponseHeader : function (header) {return 'http://www.thoughtbot.com/users/1';},
+      responseText : ericXML
+    }
+  }};
+  
+  john.save();
+  
+  assertEquals(1, john.id);
+  assertEquals("eric", john.first_name)
+  
+  // existing record
+  var john = User.build({'first_name' : 'john', 'id' : 2});
+  
+  Ajax = { Request : function (url, options) {
+    this.transport = {
+      status: 200,
+      responseText : ericXML
+    }
+  }};
+  
+  john.save();
+  
+  assertEquals("eric", john.first_name);
+  assertEquals(1, john.id); // if the server changes the ID, so be it
 }
 
 
