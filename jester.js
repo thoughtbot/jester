@@ -64,11 +64,22 @@ Base.requestXML = function(callback, url, options, user_callback) {
 
 // Helper to aid in handling either async or synchronous requests
 Base.request = function(callback, url, options, user_callback) {
-  if (user_callback) options.asynchronous = true;
+  if (user_callback) {
+    options.asynchronous = true;
+    // if an options hash was given instead of a callback
+    if (typeof(user_callback) == "object") {
+      for (var x in user_callback)
+        options[x] = user_callback[x];
+      user_callback = options.onComplete;
+    }
+  }
   else options.asynchronous = false;
   
   if (options.asynchronous) {
-    options.onComplete = function(transport) {user_callback(callback(transport));}
+    if (user_callback)
+      options.onComplete = function(transport) {user_callback(callback(transport));}
+    else
+      options.onComplete = function(transport) {callback(transport);}
     return new Ajax.Request(url, options).transport;
   }
   else

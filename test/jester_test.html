@@ -125,17 +125,36 @@ function testFind () {
 	assertEquals('another title', eric.posts[1].title);
 	assertEquals('another body', eric.posts[1].body);
 	
-	User.find(1, {}, function(eric) {
-    assertEquals(1, eric.id);
-    assertEquals('eric', eric.first_name);
-    assert(changed);
-  });
-  
-  // with params
+	// with params
   var ericLite = User.find(1, {lite: true})
   assertEquals("eric", ericLite.first_name)
   assertEquals(1, ericLite._properties.length)
   assert(typeof(ericLite.admin) == "undefined")
+	
+	// test function form of callback
+	User.find(1, {}, function(eric) {
+    assertEquals('eric', eric.first_name);
+    assert(changed);
+    changed = false;
+  });
+  
+  // test options form of callback
+  User.find(1, {}, {on200: function(eric) {
+    assertEquals('eric', eric.first_name);
+    assert(changed);
+    changed = false;
+  }});
+  
+  // test onComplete is preserved
+  User.find(1, {}, {onComplete: function(eric) {
+    assertEquals('eric', eric.first_name);
+    assert(changed);
+    changed = false;
+  }});
+  
+  // test that I can use options form but force it to be synchronous anyway
+  var eric = User.find(1, {}, {asynchronous: false})
+  assertEquals('eric', eric.first_name);
 }
 
 function testFindAll () {  
