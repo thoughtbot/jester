@@ -10,35 +10,33 @@
        "public/forum" => http://www.thoughtbot.com:8080/public/forum
        "/public/forum" => http://www.thoughtbot.com:8080/public/forum
 */
-function Base(name, prefix, singular, plural, checkNew) {
+function Base(name, options) {
   // We delay instantiating XML.ObjTree() so that it can be listed at the end of this file instead of the beginning
-  // And hey, maybe a load performance benefit too.
   if (!Base._tree) {
     Base._tree = new XML.ObjTree();
     Base._tree.attr_prefix = "@";
   }
+  if (!options) options = {};
 
   this._name = name;
   
-  if (singular)
-    this._singular = singular;
+  if (options.singular)
+    this._singular = options.singular;
   else
     this._singular = name.toLowerCase();
   
-  this._plural = this._singular.pluralize(plural);    
+  this._plural = this._singular.pluralize(options.plural);
   
   // Establish prefix
   default_prefix = function() {return "http://" + window.location.hostname + (window.location.port ? ":" + window.location.port : "");}
-  if (prefix) {
-    if (!prefix.match(/^http:/))
-       this._prefix = default_prefix() + (prefix.match(/^\//) ? "" : "/") + prefix
+  if (options.prefix) {
+    if (!options.prefix.match(/^http:/))
+       this._prefix = default_prefix() + (options.prefix.match(/^\//) ? "" : "/") + options.prefix
     else
-      this._prefix = prefix;
+      this._prefix = options.prefix;
   }
   else
     this._prefix = default_prefix();
-    
-  this._checkNew = checkNew || false;
   
   // Initialize no attributes, no associations
   this._properties = [];
@@ -49,7 +47,7 @@ function Base(name, prefix, singular, plural, checkNew) {
 }
 
 // Model declaration helper
-Base.model = function(name, prefix, singular, plural, checkNew) {eval(name + " = new Base(name, prefix, singular, plural, checkNew);")}
+Base.model = function(name, options) {eval(name + " = new Base(name, options);")}
 
 // does a request that expects XML, and parses it on return before passing it back
 Base.requestXML = function(callback, url, options, user_callback) {
@@ -149,18 +147,14 @@ Object.extend(Base.prototype, {
   },
   
   // This function would be named "new", if JavaScript in IE allowed that.
-  build : function(attributes, name, prefix, singular, plural, checkNew) {
-    var base;
-    if (name)
-      base = new Base(name, prefix, singular, plural, checkNew)
-    else
-      base = new Base(this._name, this._prefix, this._singular, this._plural, this._checkNew);
+  build : function(attributes, options) {
+    var base = new Base(this._name, {singular: this._singular, prefix: this._prefix, plural: this._plural});
     
     buildWork = function(doc) {
       base._setAttributes(base._attributesFromTree(doc[base._singular]));
     }
     
-    if (this._checkNew)
+    if (options && options.checkNew)
       Base.requestXML(buildWork, base._new_url(), {asynchronous: false});
     
     // set attributes without clearing existing ones, so any attributes specified are simply overrides
@@ -354,7 +348,9 @@ Object.extend(Base.prototype, {
             elements[plural][singular] = [elements[plural][singular]];
           
           elements[plural][singular].each(function(single) {
-            value.push(this.build(this._attributesFromTree(single), name, this._prefix, singular, plural));
+            if (typeof(name) == "undefined") Base.model(name, {prefix: this._prefix, singular: this._singular, plural: this._plural});
+            var base = eval(name + ".build(this._attributesFromTree(single), {checkNew: false})");
+            value.push(base);
           }.bind(this));
         }
         // has_one or belongs_to

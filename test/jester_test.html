@@ -402,9 +402,16 @@ function testBuild () {
   assertEquals(0, eric._properties.length);
 
   // test with checking new.xml
-  Base.model('User', null, null, null, true);
-  var eric = User.build();
+  Base.model('User');
+  var eric = User.build({}, {checkNew: true});
   assertEquals(3, eric._properties.length);
+  
+  // test that specific attributes will override what new returns
+  var eric = User.build({first_name: "eric", admin: true, daisies: 5}, {checkNew: true});
+  assertEquals(4, eric._properties.length);
+  assertEquals("eric", eric.first_name);
+  assertEquals(true, eric.admin);
+  assertEquals(5, eric.daisies);
 }
 
 
@@ -442,35 +449,35 @@ function testNameAccessors () {
 }
       
 function testPrefix () {
-  Base.model('User', 'http://www.thoughtbot.com');
+  Base.model('User', {prefix: 'http://www.thoughtbot.com'});
   assertEquals('http://www.thoughtbot.com', User._prefix);
 
-  Base.model('User', 'public/forum');
+  Base.model('User', {prefix: 'public/forum'});
   assertEquals(default_prefix() + '/public/forum', User._prefix);
 
-  Base.model('User', '/public/forum');
+  Base.model('User', {prefix: '/public/forum'});
   assertEquals(default_prefix() + '/public/forum', User._prefix);
 }
 
 function testPluralization () {
   // base case
-  Base.model('Person', null);
+  Base.model('Person');
   assertEquals('person', Person._singular);
   assertEquals('people', Person._plural);
   
   // singular override
-  Base.model('Person', null, 'user')
+  Base.model('Person', {singular: 'user'})
   assertEquals('user', Person._singular);
   assertEquals('users', Person._plural);
 
   // plural override
-  Base.model('Person', null, 'person', 'persons');
+  Base.model('Person', {plural: 'persons'});
   assertEquals('person', Person._singular);
   assertEquals('persons', Person._plural);
 }
 
 function testLocationUrls () {
-  Base.model('User', 'http://www.thoughtbot.com');
+  Base.model('User', {prefix: 'http://www.thoughtbot.com'});
   var eric = User.build({id: 1})
   
   assertEquals('http://www.thoughtbot.com/users/1.xml', eric._singular_url());
