@@ -56,7 +56,7 @@ function setUp () {
     'posts' : {
       'post' : [postDetails1, postDetails2, postDetails3]
     }
-  }  
+  }
   
   // test for belongs_to, separate from normal universe
   postIncludeDetails = { 
@@ -73,10 +73,17 @@ function setUp () {
     }
   }
   
+  newUserDetails = {
+    'first-name' : undefined,
+    'admin' : { '@type' : 'boolean', '#text' : 'false' },
+    'created_at' : { '@type' : 'datetime' },
+  }
+  
   // initiate models
   Base.model("User")
   Base.model("Post")
   
+  // mock out the Internet
   Internet = {}
   Internet[User._singular_url(1)] = {'user': ericDetails};
   Internet[User._singular_url(2)] = {'user': johnDetails};
@@ -86,9 +93,10 @@ function setUp () {
   Internet[Post._singular_url(3)] = {'post': postDetails3};
   Internet[User._plural_url()] = allUsersDetails;
   Internet[Post._plural_url()] = allPostsDetails;
-  Internet[User._singular_url(1, {lite: true})] = {'user': {'first-name' : 'eric'}}
-  Internet[User._plural_url({admin: true})] = {'users': {'user': [ericDetails, chadDetails]}}
-  Internet[User._plural_url({admin: false})] = {'users': {'user': johnDetails}}
+  Internet[User._singular_url(1, {lite: true})] = {'user': {'first-name' : 'eric'}};
+  Internet[User._plural_url({admin: true})] = {'users': {'user': [ericDetails, chadDetails]}};
+  Internet[User._plural_url({admin: false})] = {'users': {'user': johnDetails}};
+  Internet[User._new_url()] = {'user' : newUserDetails};
 
   // used to make sure callbacks get called
   changed = false;
@@ -128,7 +136,8 @@ function testFind () {
 	// with params
   var ericLite = User.find(1, {lite: true})
   assertEquals("eric", ericLite.first_name)
-  assertEquals(1, ericLite._properties.length)
+  assertEquals(1, ericLite.id) // make sure ID gets autoset
+  assertEquals(2, ericLite._properties.length)
   assert(typeof(ericLite.admin) == "undefined")
 	
 	// test function form of callback
@@ -327,6 +336,7 @@ function testSaveNewRecord () {
 
 	assert(eric.save());
 	assertEquals(1, eric.id);
+	assertEquals(1, eric.attributes().id);
 	
 	var eric = User.build({ 'first_name' : 'eric' });
 	eric.save(function(saved) {
@@ -383,6 +393,18 @@ function testSaveReloadsUponFullResponse () {
   
   assertEquals("eric", john.first_name);
   assertEquals(1, john.id); // if the server changes the ID, so be it
+}
+
+function testBuild () {
+  // test without checking new.xml
+  var eric = User.build();
+  assertEquals(Base, eric.constructor);
+  assertEquals(0, eric._properties.length);
+
+  // test with checking new.xml
+  Base.model('User', null, null, null, true);
+  var eric = User.build();
+  assertEquals(3, eric._properties.length);
 }
 
 
@@ -461,6 +483,9 @@ function testLocationUrls () {
   assertEquals('http://www.thoughtbot.com/users/1.xml?lite=true', eric._singular_url(1, {lite: true}))
   assertEquals('http://www.thoughtbot.com/users.xml', User._plural_url({}));
   assertEquals('http://www.thoughtbot.com/users/2.xml', eric._singular_url(2, {}));
+  
+  assertEquals('http://www.thoughtbot.com/users/new.xml', User._new_url());
+  assertEquals('http://www.thoughtbot.com/users/new.xml?lite=true', User._new_url({lite: true}));
 }
 
 function testNewRecordCheck () {

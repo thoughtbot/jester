@@ -10,7 +10,7 @@
        "public/forum" => http://www.thoughtbot.com:8080/public/forum
        "/public/forum" => http://www.thoughtbot.com:8080/public/forum
 */
-function Base(name, prefix, singular, plural) {
+function Base(name, prefix, singular, plural, checkNew) {
   // We delay instantiating XML.ObjTree() so that it can be listed at the end of this file instead of the beginning
   // And hey, maybe a load performance benefit too.
   if (!Base._tree) {
@@ -37,6 +37,8 @@ function Base(name, prefix, singular, plural) {
   }
   else
     this._prefix = default_prefix();
+    
+  this._checkNew = checkNew || false;
   
   // Initialize no attributes, no associations
   this._properties = [];
@@ -47,7 +49,7 @@ function Base(name, prefix, singular, plural) {
 }
 
 // Model declaration helper
-Base.model = function(name, prefix, singular, plural) {eval(name + " = new Base(name, prefix, singular, plural);")}
+Base.model = function(name, prefix, singular, plural, checkNew) {eval(name + " = new Base(name, prefix, singular, plural, checkNew);")}
 
 // does a request that expects XML, and parses it on return before passing it back
 Base.requestXML = function(callback, url, options, user_callback) {
@@ -86,10 +88,7 @@ Base.request = function(callback, url, options, user_callback) {
     return callback(new Ajax.Request(url, options).transport);
 }
 
-// Logic taken from Prototype
-extend = function(object, properties) {for (var property in properties) object[property] = properties[property];}
-
-extend(Base.prototype, {
+Object.extend(Base.prototype, {
   new_record : function() {return !(this.id);},
   valid : function() {return ! this.errors.any();},
   
@@ -112,7 +111,10 @@ extend(Base.prototype, {
     
     findOneWork = function(doc) {
       attributes = this._attributesFromTree(doc[this._singular]);
-      return this.build(attributes);
+      base = this.build(attributes);
+      // even if the ID didn't come back, we obviously knew the ID to search with, so set it
+      if (!base._properties.include("id")) base._setAttribute("id", parseInt(id))
+      return base;
     }.bind(this);
     
     if (id == "first" || id == "all") {
@@ -147,14 +149,24 @@ extend(Base.prototype, {
   },
   
   // This function would be named "new", if JavaScript in IE allowed that.
-  build : function(attributes, name, prefix, singular, plural) {
+  build : function(attributes, name, prefix, singular, plural, checkNew) {
     var base;
     if (name)
-      base = new Base(name, prefix, singular, plural)
+      base = new Base(name, prefix, singular, plural, checkNew)
     else
-      base = new Base(this._name, this._prefix, this._singular, this._plural);
+      base = new Base(this._name, this._prefix, this._singular, this._plural, this._checkNew);
     
-    base._setAttributes(attributes);
+    buildWork = function(doc) {
+      base._setAttributes(base._attributesFromTree(doc[base._singular]));
+    }
+    
+    if (this._checkNew)
+      Base.requestXML(buildWork, base._new_url(), {asynchronous: false});
+    
+    // set attributes without clearing existing ones, so any attributes specified are simply overrides
+    for (var attr in attributes)
+      base._setAttribute(attr, attributes[attr]);
+      
     return base;
   },
   
@@ -218,7 +230,7 @@ extend(Base.prototype, {
         if (loc) {
           id = parseInt(loc.match(/\/([^\/]*?)(\.\w+)?$/)[1]);
           if (!isNaN(id))
-            this.id = id;
+            this._setProperty("id", id)
         }
       }
 
@@ -292,15 +304,18 @@ extend(Base.prototype, {
     for (var attr in elements) {
       // pull out the value
       var value = elements[attr];
-      if (elements[attr]["@type"]) {
+      if (elements[attr] && elements[attr]["@type"]) {
         if (elements[attr]["#text"])
           value = elements[attr]["#text"];
         else
           value = undefined;
       }
       
+      // handle empty value (pass it through)
+      if (!value) {}
+      
       // handle scalars
-      if (typeof(value) == "string" || typeof(value) == "undefined") {
+      else if (typeof(value) == "string") {
         // perform any useful type transformations
         if (elements[attr]["@type"] == "integer") {
           var num = parseInt(value);
@@ -363,12 +378,15 @@ extend(Base.prototype, {
   // Deciding between the two on whether the attribute is a complex object or a scalar
   _setAttributes : function(attributes) {
     this._clear();
-    for (var attr in attributes) {
-      if (typeof(attributes[attr]) == "object" && attributes[attr].constructor != Date)
-        this._setAssociation(attr, attributes[attr]);
-      else
-        this._setProperty(attr, attributes[attr]);
-    }
+    for (var attr in attributes)
+      this._setAttribute(attr, attributes[attr]);
+  },
+  
+  _setAttribute : function(attribute, value) {
+    if (typeof(value) == "object" && value.constructor != Date)
+      this._setAssociation(attribute, value);
+    else
+      this._setProperty(attribute, value);
   },
   
   _setProperties : function(properties) {
@@ -424,6 +442,10 @@ extend(Base.prototype, {
   
   _plural_url : function(params) {
     return this._prefix + "/" + this._plural + ".xml" + this._queryString(params);
+  },
+  
+  _new_url : function(params) {
+    return this._prefix + "/" + this._plural + "/new.xml" + this._queryString(params);
   },
   
   // coming soon
@@ -518,8 +540,7 @@ which I will do instead of keeping this documentation like it is.
 
 */
 
-eval(function(p,a,c,k,e,r){e=function(c){return(c<a?'':e(parseInt(c/a)))+((c=c%a)>35?String.fromCharCode(c+29):c.toString(36))};if(!''.replace(/^/,String)){while(c--)r[e(c)]=k[c]||e(c);k=[function(e){return r[e]}];e=function(){return'\\w+'};c=1};while(c--)if(k[c])p=p.replace(new RegExp('\\b'+e(c)+'\\b','g'),k[c]);return p}('5(r(j)==\'D\')j=q(){};j.m=q(){k 9};j.m.10="0.V";j.m.p.S=\'<?E 18="1.0" 14="13-8" ?>\\n\';j.m.p.H=\'-\';j.m.p.W=\'U/E\';j.m.p.T=q(a){6 b;5(N.I){6 c=M I();6 d=c.17(a,"16/E");5(!d)k;b=d.K}u 5(N.J){c=M J(\'12.Z\');c.Y=C;c.X(a);b=c.K}5(!b)k;k 9.G(b)};j.m.p.G=q(a){5(!a)k;9.z={};5(9.B){w(6 i=0;i<9.B.l;i++){9.z[9.B[i]]=1}}6 b=9.A(a);5(9.z[a.x]){b=[b]}5(a.s!=11){6 c={};c[a.x]=b;b=c}k b};j.m.p.A=q(a){5(a.s==7){k}5(a.s==3||a.s==4){6 b=a.y.R(/[^\\Q-\\P]/);5(b==O)k;k a.y}6 c;6 d={};5(a.t&&a.t.l){c={};w(6 i=0;i<a.t.l;i++){6 e=a.t[i].x;5(r(e)!="L")v;6 f=a.t[i].y;5(!f)v;e=9.H+e;5(r(d[e])=="D")d[e]=0;d[e]++;9.F(c,e,d[e],f)}}5(a.o&&a.o.l){6 g=15;5(c)g=C;w(6 i=0;i<a.o.l&&g;i++){6 h=a.o[i].s;5(h==3||h==4)v;g=C}5(g){5(!c)c="";w(6 i=0;i<a.o.l;i++){c+=a.o[i].y}}u{5(!c)c={};w(6 i=0;i<a.o.l;i++){6 e=a.o[i].x;5(r(e)!="L")v;6 f=9.A(a.o[i]);5(!f)v;5(r(d[e])=="D")d[e]=0;d[e]++;9.F(c,e,d[e],f)}}}k c};j.m.p.F=q(a,b,c,d){5(9.z[b]){5(c==1)a[b]=[];a[b][a[b].l]=d}u 5(c==1){a[b]=d}u 5(c==2){a[b]=[a[b],d]}u{a[b][a[b].l]=d}};',62,71,'|||||if|var|||this||||||||||XML|return|length|ObjTree||childNodes|prototype|function|typeof|nodeType|attributes|else|continue|for|nodeName|nodeValue|__force_array|parseElement|force_array|false|undefined|xml|addNode|parseDOM|attr_prefix|DOMParser|ActiveXObject|documentElement|string|new|window|null|x20|x00|match|xmlDecl|parseXML|text|24|overrideMimeType|loadXML|async|XMLDOM|VERSION||Microsoft|UTF|encoding|true|application|parseFromString|version'.split('|'),0,{}))
-
+eval(function(p,a,c,k,e,r){e=function(c){return(c<a?'':e(parseInt(c/a)))+((c=c%a)>35?String.fromCharCode(c+29):c.toString(36))};if(!''.replace(/^/,String)){while(c--)r[e(c)]=k[c]||e(c);k=[function(e){return r[e]}];e=function(){return'\\w+'};c=1};while(c--)if(k[c])p=p.replace(new RegExp('\\b'+e(c)+'\\b','g'),k[c]);return p}('5(p(o)==\'w\')o=v(){};o.r=v(){m 9};o.r.1i="0.1b";o.r.u.14=\'<?L 1s="1.0" 1o="1n-8" ?>\\n\';o.r.u.Y=\'-\';o.r.u.1c=\'1a/L\';o.r.u.N=v(a){6 b;5(W.U){6 c=K U();6 d=c.1r(a,"1p/L");5(!d)m;b=d.A}q 5(W.10){c=K 10(\'1k.1h\');c.1g=z;c.1e(a);b=c.A}5(!b)m;m 9.E(b)};o.r.u.1d=v(c,d,e){6 f={};y(6 g 19 d){f[g]=d[g]}5(!f.M){5(p(f.18)=="w"&&p(f.17)=="w"&&p(f.16)=="w"){f.M="15"}q{f.M="13"}}5(e){f.X=V;6 h=9;6 i=e;6 j=f.T;f.T=v(a){6 b;5(a&&a.x&&a.x.A){b=h.E(a.x.A)}q 5(a&&a.J){b=h.N(a.J)}i(b,a);5(j)j(a)}}q{f.X=z}6 k;5(p(S)!="w"&&S.I){f.1q=c;6 l=K S.I(f);5(l)k=l.12}q 5(p(Q)!="w"&&Q.I){6 l=K Q.I(c,f);5(l)k=l.12}5(e)m k;5(k&&k.x&&k.x.A){m 9.E(k.x.A)}q 5(k&&k.J){m 9.N(k.J)}};o.r.u.E=v(a){5(!a)m;9.H={};5(9.P){y(6 i=0;i<9.P.t;i++){9.H[9.P[i]]=1}}6 b=9.O(a);5(9.H[a.F]){b=[b]}5(a.B!=11){6 c={};c[a.F]=b;b=c}m b};o.r.u.O=v(a){5(a.B==7){m}5(a.B==3||a.B==4){6 b=a.G.1j(/[^\\1f-\\1l]/);5(b==1m)m z;m a.G}6 c;6 d={};5(a.D&&a.D.t){c={};y(6 i=0;i<a.D.t;i++){6 e=a.D[i].F;5(p(e)!="Z")C;6 f=a.D[i].G;5(!f)C;e=9.Y+e;5(p(d[e])=="w")d[e]=0;d[e]++;9.R(c,e,d[e],f)}}5(a.s&&a.s.t){6 g=V;5(c)g=z;y(6 i=0;i<a.s.t&&g;i++){6 h=a.s[i].B;5(h==3||h==4)C;g=z}5(g){5(!c)c="";y(6 i=0;i<a.s.t;i++){c+=a.s[i].G}}q{5(!c)c={};y(6 i=0;i<a.s.t;i++){6 e=a.s[i].F;5(p(e)!="Z")C;6 f=9.O(a.s[i]);5(f==z)C;5(p(d[e])=="w")d[e]=0;d[e]++;9.R(c,e,d[e],f)}}}m c};o.r.u.R=v(a,b,c,d){5(9.H[b]){5(c==1)a[b]=[];a[b][a[b].t]=d}q 5(c==1){a[b]=d}q 5(c==2){a[b]=[a[b],d]}q{a[b][a[b].t]=d}};',62,91,'|||||if|var|||this|||||||||||||return||XML|typeof|else|ObjTree|childNodes|length|prototype|function|undefined|responseXML|for|false|documentElement|nodeType|continue|attributes|parseDOM|nodeName|nodeValue|__force_array|Request|responseText|new|xml|method|parseXML|parseElement|force_array|Ajax|addNode|HTTP|onComplete|DOMParser|true|window|asynchronous|attr_prefix|string|ActiveXObject||transport|post|xmlDecl|get|parameters|postbody|postBody|in|text|24|overrideMimeType|parseHTTP|loadXML|x00|async|XMLDOM|VERSION|match|Microsoft|x20|null|UTF|encoding|application|uri|parseFromString|version'.split('|'),0,{}))
 
 /*
 
