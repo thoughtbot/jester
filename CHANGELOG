@@ -1,20 +1,74 @@
 ========================
+Version 1.2 (April 30th)
+========================
+
+  Release post:
+  http://giantrobots.thoughtbot.com/2007/4/30/jester-1-2-flexible-rest
+
+  * Arguments to Base.model() now passed as a hash.  So:
+      
+      Base.model("User", {plural: "people", prefix: "http://www.thoughtbot.com"})
+  
+  * Initial support for figuring out a model's attributes on "build" by using /new.xml, a recent expansion to Rails' REST standard. (Changeset #6579)
+  
+      An HTTP request will not occur by default on a call to build(), supply a hash with the option "checkNew" set to true.  
+      This action is also currently forced to be synchronous.  I expect this to change, but I need some feedback on syntax before that happens.
+  
+      For a discussion, see:
+      http://groups.google.com/group/rubyonrails-core/browse_thread/thread/e36b84f9c1c3fe38
+  
+  * Asynchronous options can be provided as a hash, instead of simply providing an onComplete callback.
+  
+      Additionally, this is now the *third* argument to find, where query parameters are the second.
+      You can use this hash and still force synchronous mode by specifying the "asynchronous" option as "false".
+      
+      User.find(1, {}, {onSuccess: successCallback, onFailure: failureCallback})
+      
+  * Additional query parameters to find(), taken as a second argument in hash form.  
+  
+      User.find("all", {admin: true, toys: 5}, {onSuccess: callback})
+      => asynchronously requests "/users.xml?admin=true&toys"
+      
+  * Added (packed) date parsing code. (Nicholas Barthelemy)
+  
+  * If the response from a save() call includes an XML body, the model will be reloaded with that data.
+  
+  * Removed prototype.js from repository, included an optional, lightened version with only what Jester uses.
+  
+  * Packed ObjTree and included it in jester.js, eliminating ObjTree.js.
+  
+  * Little things:
+      
+      ID will be set on a find(id) call, even if the ID isn't in the returned XML response.
+      Bug: ID wasn't being stored as a property correctly when it was parsed out of a Location header.
+      Bug: One in ObjTree, where it didn't catch nodes with no text data in them (e.g. "<email></email>").
+      Bug: Removed commas at the end of some hashes, which IE chokes on.
+
+========================
 Version 1.1 (April 16th)
 ========================
+
   Release post:
   http://giantrobots.thoughtbot.com/2007/4/16/jester-1-1-asynchronous-and-more
 
   * Asynchronous support.
+  
   * find('all'), find('first') - works like ActiveRecord.
+  
   * attributes() - works like ActiveRecord.
+  
   * reload() - works like ActiveRecord.
-  * Pluralization, a proper Inflector library. (Thanks to Ryan Schuft!)
+  
+  * Pluralization, a proper Inflector library. (Ryan Schuft)
+  
   * Cleaned up and expanded JsUnit tests.
+  
   * Significant code cleanup and prettifying.
 
 ========================
 Version 1.0 (April 2nd)
 ========================
+
   Release post:
   http://giantrobots.thoughtbot.com/2007/4/2/jester-javascriptian-rest
 
