@@ -541,6 +541,7 @@ eval(function(p,a,c,k,e,r){e=function(c){return(c<a?'':e(parseInt(c/a)))+((c=c%a
 /*
 
 This is a Date parsing library by Nicholas Barthelemy, packed to keep jester.js light.
+Homepage: https://svn.nbarthelemy.com/date-js/
 Compressed using http://dean.edwards.name/packer/.
 
 */
