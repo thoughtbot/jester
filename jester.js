@@ -455,7 +455,7 @@ Object.extend(Base.prototype, {
     for (var key in params)
       string += (string == "" ? "?" : "&") + key + "=" + params[key]
     return string;
-  },
+  }
 
 });
 
@@ -478,7 +478,7 @@ Base.elementHasMany = function(element) {
 /* 
   Inflector library, contributed graciously to Jester by Ryan Schuft.
   The library in full is a complete port of Rails' Inflector, though Jester only uses its pluralization.
-  Its home page, including its MIT license, can be found at http://code.google.com/p/inflection-js/
+  Its home page can be found at: http://code.google.com/p/inflection-js/
 */
 
 if (!String.prototype.pluralize) String.prototype.pluralize = function(plural) {
