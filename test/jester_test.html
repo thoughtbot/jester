@@ -430,7 +430,7 @@ function testSetAttributesOverwritesSpecifiedAttributes(){
 	assertEquals('old name attr not restored', oldAttrs.first_name, eric.first_name);
 }
 
-function testSetAttributesOverwritesSpecifiedAttributes(){
+function testUpdateAttributesOverwritesSpecifiedAttributesAndSaves(){
   var eric = User.find(1);
   newAttrs = {
     'first_name' : 'todd',
