@@ -265,7 +265,7 @@ Object.extend(Base.prototype, {
   
   updateAttributes : function(attributes, callback)
   {
-    $H(attributes).each(function(attr){ this._setAttribute(attr.key, attr.value) }.bind(this));
+    this.setAttributes(attributes);
     return this.save(callback);
   },
   

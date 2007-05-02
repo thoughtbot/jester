@@ -415,7 +415,7 @@ function testBuild () {
   assertEquals(5, eric.daisies);
 }
 
-function testSetAttributesOverwritesSpecifiedAttributes(){
+function testSetAttributes() {
   var eric = User.find(1);
   newAttrs = {
     'first_name' : 'todd',
@@ -430,7 +430,7 @@ function testSetAttributesOverwritesSpecifiedAttributes(){
 	assertEquals('old name attr not restored', oldAttrs.first_name, eric.first_name);
 }
 
-function testUpdateAttributesOverwritesSpecifiedAttributesAndSaves(){
+function testUpdateAttributes() {
   var eric = User.find(1);
   newAttrs = {
     'first_name' : 'todd',
