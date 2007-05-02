@@ -443,29 +443,24 @@ Object.extend(Base.prototype, {
       params = id;
       id = null;
     }
+    if (params) params = $H(params);
       
-    return ((id || this.id) ? this._prefix + "/" + this._plural + "/" + (id || this.id) + ".xml" : "") + this._queryString(params);
+    return ((id || this.id) ? this._prefix + "/" + this._plural + "/" + (id || this.id) + ".xml" : "") + (params && params.any() ? "?" + params.toQueryString() : "");
   },
   
   _plural_url : function(params) {
-    return this._prefix + "/" + this._plural + ".xml" + this._queryString(params);
+    params = $H(params);
+    return this._prefix + "/" + this._plural + ".xml" + (params && params.any() ? "?" + params.toQueryString() : "");
   },
   
   _new_url : function(params) {
-    return this._prefix + "/" + this._plural + "/new.xml" + this._queryString(params);
+    params = $H(params);
+    return this._prefix + "/" + this._plural + "/new.xml" + (params && params.any() ? "?" + params.toQueryString() : "");
   },
   
   // coming soon
   _custom_url : function() {
   
-  },
-  
-  _queryString : function(params) {
-    if (!params) return "";
-    string = "";
-    for (var key in params)
-      string += (string == "" ? "?" : "&") + key + "=" + params[key]
-    return string;
   }
 
 });
