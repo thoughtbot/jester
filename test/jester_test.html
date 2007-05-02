@@ -18,6 +18,7 @@ function setUp () {
   
   ericXML = '<?xml version="1.0" encoding="UTF-8"?><user><created-at type="datetime">2007-04-08T15:12:06-04:00</created-at><id type="integer">1</id><first-name>eric</first-name><admin type="boolean">true</admin></user>'
 
+
   postDetails1 = { 'id' : { '@type' : 'integer', '#text' : '1' }, 'title' : 'the title', 'body' : 'the body' }
   postDetails2 = { 'id' : { '@type' : 'integer', '#text' : '2' }, 'title' : 'another title', 'body' : 'another body' }
   postDetails3 = { 'id' : { '@type' : 'integer', '#text' : '2' }, 'title' : 'yet another title', 'body' : 'yet another body' }
@@ -414,6 +415,35 @@ function testBuild () {
   assertEquals(5, eric.daisies);
 }
 
+function testSetAttributesOverwritesSpecifiedAttributes(){
+  var eric = User.find(1);
+  newAttrs = {
+    'first_name' : 'todd',
+    'admin' : false,
+  }
+  oldAttrs = eric.attributes();
+  eric.setAttributes(newAttrs);
+  assertEquals('first_name attr not updated', 'todd', eric.first_name);
+  assertEquals('admin attr not updated', false, eric.admin);
+  assertEquals('created_at attr not preserved', oldAttrs.created_at, eric.created_at);
+  eric.reload();
+	assertEquals('old name attr not restored', oldAttrs.first_name, eric.first_name);
+}
+
+function testSetAttributesOverwritesSpecifiedAttributes(){
+  var eric = User.find(1);
+  newAttrs = {
+    'first_name' : 'todd',
+    'admin' : false,
+  }
+  oldAttrs = eric.attributes();
+  eric.updateAttributes(newAttrs);
+  assertEquals('first_name attr not updated', 'todd', eric.first_name);
+  assertEquals('admin attr not updated', false, eric.admin);
+  assertEquals('created_at attr not preserved', oldAttrs.created_at, eric.created_at);
+  eric.reload();
+	assertEquals('new name attr not preserved', oldAttrs.first_name, eric.first_name);
+}
 
 /********************************************
  ************ INTERNAL TESTS ****************

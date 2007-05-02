@@ -257,6 +257,18 @@ Object.extend(Base.prototype, {
     return Base.request(saveWork, url, {parameters: params, method: method}, callback);
   },
   
+  setAttributes : function(attributes)
+  {
+    $H(attributes).each(function(attr){ this._setAttribute(attr.key, attr.value) }.bind(this));
+    return attributes;
+  },
+  
+  updateAttributes : function(attributes, callback)
+  {
+    $H(attributes).each(function(attr){ this._setAttribute(attr.key, attr.value) }.bind(this));
+    return this.save(callback);
+  },
+  
   // mimics ActiveRecord's behavior of omitting associations, but keeping foreign keys
   attributes : function(include_associations) {
     var attributes = {}
