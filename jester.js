@@ -158,8 +158,7 @@ Object.extend(Base.prototype, {
       Base.requestXML(buildWork, base._new_url(), {asynchronous: false});
     
     // set attributes without clearing existing ones, so any attributes specified are simply overrides
-    for (var attr in attributes)
-      base._setAttribute(attr, attributes[attr]);
+    base.setAttributes(attributes)
       
     return base;
   },

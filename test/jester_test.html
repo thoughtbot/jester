@@ -408,8 +408,17 @@ function testBuild () {
   assertEquals(3, eric._properties.length);
   
   // test that specific attributes will override what new returns
-  var eric = User.build({first_name: "eric", admin: true, daisies: 5}, {checkNew: true});
+  var attrs = {first_name: "eric", admin: true, daisies: 5}
+  
+  var eric = User.build(attrs, {checkNew: true});
   assertEquals(4, eric._properties.length);
+  assertEquals("eric", eric.first_name);
+  assertEquals(true, eric.admin);
+  assertEquals(5, eric.daisies);
+  
+  //test that build works with prototype style hashes
+  var eric = User.build($H(attrs), {checkNew: true});
+	assertEquals(4, eric._properties.length);
   assertEquals("eric", eric.first_name);
   assertEquals(true, eric.admin);
   assertEquals(5, eric.daisies);
