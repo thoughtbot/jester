@@ -20,6 +20,11 @@ function Base(name, options) {
 
   this._name = name;
   
+  if (options.language)
+    this._language = options.language.toLowerCase();
+  else
+    this._language = "xml";
+  
   if (options.singular)
     this._singular = options.singular;
   else
@@ -49,16 +54,27 @@ function Base(name, options) {
 // Model declaration helper
 Base.model = function(name, options) {eval(name + " = new Base(name, options);")}
 
+Base.requestXML = function(callback, url, options, user_callback) {return Base.requestAndParse("xml", callback, url, options, user_callback);}
+
+Base.requestJSON = function(callback, url, options, user_callback) {return Base.requestAndParse("json", callback, url, options, user_callback);}
+
 // does a request that expects XML, and parses it on return before passing it back
-Base.requestXML = function(callback, url, options, user_callback) {
-  parse_and_callback = function(transport) {
-    return callback(Base._tree.parseXML(transport.responseText));
+Base.requestAndParse = function(format, callback, url, options, user_callback) {
+  parse_and_callback = null;
+  if (format.toLowerCase() == "json") {
+    parse_and_callback = function(transport) {
+      eval("var attributes = " + transport.responseText);
+      return callback(attributes);
+    }
+  }
+  else {
+    parse_and_callback = function(transport) {return callback(Base._tree.parseXML(transport.responseText));}
   }
   
-  // most XML requests are going to be a GET
+  // most parse requests are going to be a GET
   if (!(options.postBody || options.parameters || options.postbody || options.method == "post"))
     options.method = "get";
-    
+  
   return Base.request(parse_and_callback, url, options, user_callback);
 }
 
@@ -91,14 +107,25 @@ Object.extend(Base.prototype, {
   valid : function() {return ! this.errors.any();},
   
   find : function(id, params, callback) {
-    findAllWork = function(doc) {
-      // if only one result, wrap it in an array
-      if (!Base.elementHasMany(doc[this._plural]))
-        doc[this._plural][this._singular] = [doc[this._plural][this._singular]];
-      
-      var results = doc[this._plural][this._singular].map(function(elem) {
-        return this.build(this._attributesFromTree(elem));
-      }.bind(this));
+    findAllWork = function(raw) {
+      var results;
+      if (this._language == "json") {
+        if (raw.constructor == Array) {
+          self.raw = raw;
+          results = raw.map(function(item) {
+            return this.build(this._attributesFromJSON(item));
+          }.bind(this));
+        }
+      }
+      else {
+        // if only one result, wrap it in an array
+        if (!Base.elementHasMany(raw[this._plural]))
+          raw[this._plural][this._singular] = [raw[this._plural][this._singular]];
+        
+        results = raw[this._plural][this._singular].map(function(elem) {
+          return this.build(this._attributesFromTree(elem));
+        }.bind(this));
+      }
       
       // This is better than requiring the controller to support a "limit" parameter
       if (id == "first")
@@ -107,9 +134,14 @@ Object.extend(Base.prototype, {
       return results; 
     }.bind(this);
     
-    findOneWork = function(doc) {
-      attributes = this._attributesFromTree(doc[this._singular]);
-      base = this.build(attributes);
+    findOneWork = function(raw) {
+      var attributes;
+      if (this._language == "json")
+        attributes = this._attributesFromJSON(raw);
+      else
+        attributes = this._attributesFromTree(raw[this._singular]);
+        
+      var base = this.build(attributes);
       // even if the ID didn't come back, we obviously knew the ID to search with, so set it
       if (!base._properties.include("id")) base._setAttribute("id", parseInt(id))
       return base;
@@ -117,18 +149,18 @@ Object.extend(Base.prototype, {
     
     if (id == "first" || id == "all") {
       var url = this._plural_url(params);
-      return Base.requestXML(findAllWork, url, {}, callback);
+      return Base.requestAndParse(this._language, findAllWork, url, {}, callback);
     }
     else {
       if (isNaN(parseInt(id))) return null;
       var url = this._singular_url(id, params);
-      return Base.requestXML(findOneWork, url, {}, callback);
+      return Base.requestAndParse(this._language, findOneWork, url, {}, callback);
     }
   },
   
   reload : function(callback) {
     reloadWork = function(copy) {
-      this._setAttributes(copy.attributes(true));
+      this._resetAttributes(copy.attributes(true));
   
       if (callback)
         return callback(this);
@@ -148,10 +180,10 @@ Object.extend(Base.prototype, {
   
   // This function would be named "new", if JavaScript in IE allowed that.
   build : function(attributes, options) {
-    var base = new Base(this._name, {singular: this._singular, prefix: this._prefix, plural: this._plural});
+    var base = new Base(this._name, {singular: this._singular, prefix: this._prefix, plural: this._plural, language: this._language});
     
     buildWork = function(doc) {
-      base._setAttributes(base._attributesFromTree(doc[base._singular]));
+      base._resetAttributes(base._attributesFromTree(doc[base._singular]));
     }
     
     if (options && options.checkNew)
@@ -213,7 +245,7 @@ Object.extend(Base.prototype, {
           this._setErrors(this._errorsFromTree(doc.errors));
           
         else if (doc[this._singular])
-          this._setAttributes(this._attributesFromTree(doc[this._singular]));
+          this._resetAttributes(this._attributesFromTree(doc[this._singular]));
       }
 
 
@@ -285,22 +317,28 @@ Object.extend(Base.prototype, {
     Internal methods.
   */
   
-  _errorsFromTree : function(elements) {
+  _loadSingle : function(raw) {
   
-    var errors = [];
-    if (typeof(elements.error) == "string")
-      elements.error = [elements.error];
-    
-    elements.error.each(function(value, index) {
-      errors.push(value);
-    });
-    
-    return errors;
   },
   
-  // Sets errors with an array.  Could be extended at some point to include breaking error messages into pairs (attribute, msg).
-  _setErrors : function(errors) {
-    this.errors = errors;
+  _loadCollection : function(raw) {
+  
+  },
+  
+  // Converts a JSON hash returns from ActiveRecord::Base#to_json into a hash of attribute values
+  // Does not handle associations, as AR's #to_json doesn't either
+  // Also, JSON doesn't include room to store types, so little auto-transforming is done here (just on 'id')
+  _attributesFromJSON : function(json) {
+    var attributes = {}
+    if (!json) return attributes;
+    
+    for (var attr in json.attributes) {
+      value = json.attributes[attr];
+      if (attr == "id")
+        value = parseInt(value);
+      attributes[attr] = value;
+    }
+    return attributes;
   },
   
   // Converts the XML tree returned from a single object into a hash of attribute values
@@ -359,7 +397,7 @@ Object.extend(Base.prototype, {
             elements[plural][singular] = [elements[plural][singular]];
           
           elements[plural][singular].each(function(single) {
-            if (typeof(name) == "undefined") Base.model(name, {prefix: this._prefix, singular: this._singular, plural: this._plural});
+            if (typeof(eval(name)) == "undefined") Base.model(name, {prefix: this._prefix, singular: singular, plural: plural});
             var base = eval(name + ".build(this._attributesFromTree(single), {checkNew: false})");
             value.push(base);
           }.bind(this));
@@ -368,7 +406,9 @@ Object.extend(Base.prototype, {
         else {
           singular = attr;
           var name = singular.capitalize();
-          value = this.build(this._attributesFromTree(value), name, this._prefix, singular);
+          
+          if (typeof(eval(name)) == "undefined") Base.model(name, {prefix: this._prefix, singular: singular});
+          value = eval(name + ".build(this._attributesFromTree(value), name, this._prefix, singular)");
         }
       }
       
@@ -380,17 +420,41 @@ Object.extend(Base.prototype, {
     return attributes;
   },
   
+    // Pulls errors from JSON
+  _errorsFromJSON : function(errors) {
+  
+  },
+  
+  // Pulls errors from XML
+  _errorsFromTree : function(elements) {
+  
+    var errors = [];
+    if (typeof(elements.error) == "string")
+      elements.error = [elements.error];
+    
+    elements.error.each(function(value, index) {
+      errors.push(value);
+    });
+    
+    return errors;
+  },
+  
+  // Sets errors with an array.  Could be extended at some point to include breaking error messages into pairs (attribute, msg).
+  _setErrors : function(errors) {
+    this.errors = errors;
+  },
+  
   
   // Sets all attributes and associations at once
   // Deciding between the two on whether the attribute is a complex object or a scalar
-  _setAttributes : function(attributes) {
+  _resetAttributes : function(attributes) {
     this._clear();
     for (var attr in attributes)
       this._setAttribute(attr, attributes[attr]);
   },
   
   _setAttribute : function(attribute, value) {
-    if (typeof(value) == "object" && value.constructor != Date)
+    if (value && typeof(value) == "object" && value.constructor != Date)
       this._setAssociation(attribute, value);
     else
       this._setProperty(attribute, value);
@@ -445,17 +509,20 @@ Object.extend(Base.prototype, {
     }
     if (params) params = $H(params);
       
-    return ((id || this.id) ? this._prefix + "/" + this._plural + "/" + (id || this.id) + ".xml" : "") + (params && params.any() ? "?" + params.toQueryString() : "");
+    if (id || this.id)
+      return this._prefix + "/" + this._plural + "/" + (id || this.id) + "." + this._language + (params && params.any() ? "?" + params.toQueryString() : "");
+    else
+      return "";
   },
   
   _plural_url : function(params) {
     params = $H(params);
-    return this._prefix + "/" + this._plural + ".xml" + (params && params.any() ? "?" + params.toQueryString() : "");
+    return this._prefix + "/" + this._plural + "." + this._language + (params && params.any() ? "?" + params.toQueryString() : "");
   },
   
   _new_url : function(params) {
     params = $H(params);
-    return this._prefix + "/" + this._plural + "/new.xml" + (params && params.any() ? "?" + params.toQueryString() : "");
+    return this._prefix + "/" + this._plural + "/new." + this._language + (params && params.any() ? "?" + params.toQueryString() : "");
   },
   
   // coming soon

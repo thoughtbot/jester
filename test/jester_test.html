@@ -17,7 +17,8 @@ function setUp () {
   default_prefix = function() {return "http://" + window.location.hostname + (window.location.port ? ":" + window.location.port : "");}
   
   ericXML = '<?xml version="1.0" encoding="UTF-8"?><user><created-at type="datetime">2007-04-08T15:12:06-04:00</created-at><id type="integer">1</id><first-name>eric</first-name><admin type="boolean">true</admin></user>'
-
+  eval('ericJSON = {attributes: {id: "1", first_name: "eric", admin: "1", created_at: "2007-04-08 15:12:06"}}')
+  eval('postJSON = {attributes: {id: "1", title: "the title", body: "the body"}}')
 
   postDetails1 = { 'id' : { '@type' : 'integer', '#text' : '1' }, 'title' : 'the title', 'body' : 'the body' }
   postDetails2 = { 'id' : { '@type' : 'integer', '#text' : '2' }, 'title' : 'another title', 'body' : 'another body' }
@@ -85,30 +86,33 @@ function setUp () {
   Base.model("Post")
   
   // mock out the Internet
-  Internet = {}
-  Internet[User._singular_url(1)] = {'user': ericDetails};
-  Internet[User._singular_url(2)] = {'user': johnDetails};
-  Internet[User._singular_url(3)] = {'user': chadDetails};
-  Internet[Post._singular_url(1)] = {'post': postDetails1};
-  Internet[Post._singular_url(2)] = {'post': postDetails2};
-  Internet[Post._singular_url(3)] = {'post': postDetails3};
-  Internet[User._plural_url()] = allUsersDetails;
-  Internet[Post._plural_url()] = allPostsDetails;
-  Internet[User._singular_url(1, {lite: true})] = {'user': {'first-name' : 'eric'}};
-  Internet[User._plural_url({admin: true})] = {'users': {'user': [ericDetails, chadDetails]}};
-  Internet[User._plural_url({admin: false})] = {'users': {'user': johnDetails}};
-  Internet[User._new_url()] = {'user' : newUserDetails};
+  Internet = {xml: {}, json: {}}
+  Internet["xml"][User._singular_url(1)] = {'user': ericDetails};
+  Internet["xml"][User._singular_url(2)] = {'user': johnDetails};
+  Internet["xml"][User._singular_url(3)] = {'user': chadDetails};
+  Internet["xml"][Post._singular_url(1)] = {'post': postDetails1};
+  Internet["xml"][Post._singular_url(2)] = {'post': postDetails2};
+  Internet["xml"][Post._singular_url(3)] = {'post': postDetails3};
+  Internet["xml"][User._plural_url()] = allUsersDetails;
+  Internet["xml"][Post._plural_url()] = allPostsDetails;
+  Internet["xml"][User._singular_url(1, {lite: true})] = {'user': {'first-name' : 'eric'}};
+  Internet["xml"][User._plural_url({admin: true})] = {'users': {'user': [ericDetails, chadDetails]}};
+  Internet["xml"][User._plural_url({admin: false})] = {'users': {'user': johnDetails}};
+  Internet["xml"][User._new_url()] = {'user' : newUserDetails};
+  Internet["json"][User._singular_url(1)] = ericJSON;
+  Internet["json"][Post._singular_url(1)] = postJSON;
+
 
   // used to make sure callbacks get called
   changed = false;
   change = function() {changed = true;}
   
-  Base.requestXML = function (callback, url, options, user_callback) {
+  Base.requestAndParse = function (format, callback, url, options, user_callback) {
     call = function(doc) {change(); return callback(doc);}
     if (callback)
-      return call(Internet[url]);
+      return call(Internet[format][url]);
     else
-      return Internet[url];
+      return Internet[format][url];
   }
 }
 
@@ -119,20 +123,22 @@ function setUp () {
 
 function testFind () {
 	var eric = User.find(1);
+	
 	assertEquals('User', eric._name)
 	assertEquals('user', eric._singular);
 	assertEquals('users', eric._plural);
-	assertEquals(1, eric.id);
-	assertEquals('eric', eric.first_name);
-	assert(eric.admin);
-	assertEquals(Date, eric.created_at.constructor);
+	
+	assertEquals("Attributes should be filled in correctly on find().", 'eric', eric.first_name);
+	assert("Boolean attributes should be auto-transformed (when language is XML).", eric.admin);
+	assertEquals("Date attributes should be auto-transformed (when language is XML).", Date, eric.created_at.constructor);
+	assertEquals("Integer attributes should be auto-transformed (when language is XML).", 1, eric.id);
 
-	assertEquals(2, eric.posts.length);
-	assertEquals(1, eric.posts[0].id);
-	assertEquals('the title', eric.posts[0].title);
-	assertEquals('the body', eric.posts[0].body);
-	assertEquals('another title', eric.posts[1].title);
-	assertEquals('another body', eric.posts[1].body);
+	assertEquals("Eric should have two posts.", 2, eric.posts.length);
+	assertEquals("Eric's first post should have ID 1.", 1, eric.posts[0].id);
+	assertEquals("Eric's post's title wasn't loaded.", 'the title', eric.posts[0].title);
+	assertEquals("Eric's post's body wasn't loaded.", 'the body', eric.posts[0].body);
+	assertEquals("Eric's second post's title wasn't loaded.", 'another title', eric.posts[1].title);
+	assertEquals("Eric's second post's body wasn't loaded.", 'another body', eric.posts[1].body);
 	
 	// with params
   var ericLite = User.find(1, {lite: true})
@@ -186,7 +192,7 @@ function testFindAll () {
   });
   
   // test that there's no issue with one element arrays in XML
-  Internet[User._plural_url()] = allWithOneUserDetails;
+  Internet["xml"][User._plural_url()] = allWithOneUserDetails;
   var users = User.find("all");
   assertEquals(1, users.length);
   
@@ -220,13 +226,13 @@ function testReload () {
   var eric = User.find(1)
   
   // fake that the user details got updated
-  Internet[User._singular_url(1)] = {'user': johnDetails}
+  Internet["xml"][User._singular_url(1)] = {'user': johnDetails}
   
   eric.reload();
   assertEquals("john", eric.first_name)
   
   // switch back
-  Internet[User._singular_url(2)] = {'user': ericDetails}
+  Internet["xml"][User._singular_url(2)] = {'user': ericDetails}
   
   eric.reload(function(ignoreMe) {
     assertEquals("eric", eric.first_name)
@@ -244,6 +250,16 @@ function testRelations () {
   
   var john = User.find(2);
   assertEquals(1, john.posts.length);
+  
+  assertEquals("has_many object should have correct name.", "Post", eric.posts[0]._name);
+  assertEquals("has_many object should have correct singular form.", "post", eric.posts[0]._singular);
+  assertEquals("has_many object should have correct plural form.", "posts", eric.posts[1]._plural);
+  
+  Internet["xml"][Post._singular_url(1)] = {'post': postIncludeDetails};
+  var post = Post.find(1);
+  assertEquals("has_one object should have correct name.", "User", post.user._name);
+  assertEquals("has_one object should have correct singular form.", "user", post.user._singular);
+  assertEquals("has_one object should have correct plural form.", "users", post.user._plural);
 }
 
 
@@ -408,17 +424,8 @@ function testBuild () {
   assertEquals(3, eric._properties.length);
   
   // test that specific attributes will override what new returns
-  var attrs = {first_name: "eric", admin: true, daisies: 5}
-  
-  var eric = User.build(attrs, {checkNew: true});
+  var eric = User.build({first_name: "eric", admin: true, daisies: 5}, {checkNew: true});
   assertEquals(4, eric._properties.length);
-  assertEquals("eric", eric.first_name);
-  assertEquals(true, eric.admin);
-  assertEquals(5, eric.daisies);
-  
-  //test that build works with prototype style hashes
-  var eric = User.build($H(attrs), {checkNew: true});
-	assertEquals(4, eric._properties.length);
   assertEquals("eric", eric.first_name);
   assertEquals(true, eric.admin);
   assertEquals(5, eric.daisies);
@@ -432,11 +439,11 @@ function testSetAttributes() {
   }
   oldAttrs = eric.attributes();
   eric.setAttributes(newAttrs);
-  assertEquals('first_name attr not updated', 'todd', eric.first_name);
-  assertEquals('admin attr not updated', false, eric.admin);
-  assertEquals('created_at attr not preserved', oldAttrs.created_at, eric.created_at);
+  assertEquals('first_name attribute not updated.', 'todd', eric.first_name);
+  assertEquals('admin attribute not updated.', false, eric.admin);
+  assertEquals('created_at attribute not preserved.', oldAttrs.created_at, eric.created_at);
   eric.reload();
-	assertEquals('old name attr not restored', oldAttrs.first_name, eric.first_name);
+	assertEquals('old name attribute not restored.', oldAttrs.first_name, eric.first_name);
 }
 
 function testUpdateAttributes() {
@@ -447,11 +454,11 @@ function testUpdateAttributes() {
   }
   oldAttrs = eric.attributes();
   eric.updateAttributes(newAttrs);
-  assertEquals('first_name attr not updated', 'todd', eric.first_name);
-  assertEquals('admin attr not updated', false, eric.admin);
-  assertEquals('created_at attr not preserved', oldAttrs.created_at, eric.created_at);
+  assertEquals('first_name attribute not updated.', 'todd', eric.first_name);
+  assertEquals('admin attribute not updated.', false, eric.admin);
+  assertEquals('created_at attribute not preserved.', oldAttrs.created_at, eric.created_at);
   eric.reload();
-	assertEquals('new name attr not preserved', oldAttrs.first_name, eric.first_name);
+	assertEquals('new name attribute not preserved.', oldAttrs.first_name, eric.first_name);
 }
 
 /********************************************
@@ -542,6 +549,23 @@ function testNewRecordCheck () {
   assert(! eric.new_record());
 }
 
+function testAttributesFromJSON() {
+  var attributes = User._attributesFromJSON(ericJSON);
+  assertEquals("The ID should be auto-transformed from JSON.", 1, attributes.id);
+  assertEquals("1", attributes.admin.toString()); // toString() since "1" == true
+  assertEquals("eric", attributes.first_name);
+}
+
+function testAttributesFromTree() {
+  var attributes = User._attributesFromTree(ericDetails);
+  assertEquals("Integers auto-transformed from XML.", 1, attributes.id);
+  assert(attributes.admin);
+  assertEquals("eric", attributes.first_name);
+}
+
+function testErrorsFromJSON() {
+}
+
 function testErrorsFromTree () {
 	var errorTree = { 'error' : ["Name can't be blank", "City can't be blank"] }
 	var errors = User._errorsFromTree(errorTree);
@@ -566,4 +590,3 @@ function testSetErrors () {
     </script>
   </body>
 </html>
-
