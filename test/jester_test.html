@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+ <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 
 <html>
@@ -18,7 +18,9 @@ function setUp () {
   
   ericXML = '<?xml version="1.0" encoding="UTF-8"?><user><created-at type="datetime">2007-04-08T15:12:06-04:00</created-at><id type="integer">1</id><first-name>eric</first-name><admin type="boolean">true</admin></user>'
   eval('ericJSON = {attributes: {id: "1", first_name: "eric", admin: "1", created_at: "2007-04-08 15:12:06"}}')
+  eval('johnJSON = {attributes: {id: "2", first_name: "john", admin: "0", created_at: "2007-04-09 15:12:06"}}')
   eval('postJSON = {attributes: {id: "1", title: "the title", body: "the body"}}')
+  eval('usersJSON = [ericJSON, johnJSON]')
 
   postDetails1 = { 'id' : { '@type' : 'integer', '#text' : '1' }, 'title' : 'the title', 'body' : 'the body' }
   postDetails2 = { 'id' : { '@type' : 'integer', '#text' : '2' }, 'title' : 'another title', 'body' : 'another body' }
@@ -81,26 +83,33 @@ function setUp () {
     'created_at' : { '@type' : 'datetime' }
   }
   
+  // mock out the Internet
+  Internet = {}
+  
+  // initiate models
+  Base.model("User", {language: "json"})
+  Base.model("Post", {language: "json"})
+  
+  Internet[User._singular_url(1)] = ericJSON;
+  Internet[Post._singular_url(1)] = postJSON;
+  Internet[User._plural_url()] = usersJSON;
+  
   // initiate models
   Base.model("User")
   Base.model("Post")
   
-  // mock out the Internet
-  Internet = {xml: {}, json: {}}
-  Internet["xml"][User._singular_url(1)] = {'user': ericDetails};
-  Internet["xml"][User._singular_url(2)] = {'user': johnDetails};
-  Internet["xml"][User._singular_url(3)] = {'user': chadDetails};
-  Internet["xml"][Post._singular_url(1)] = {'post': postDetails1};
-  Internet["xml"][Post._singular_url(2)] = {'post': postDetails2};
-  Internet["xml"][Post._singular_url(3)] = {'post': postDetails3};
-  Internet["xml"][User._plural_url()] = allUsersDetails;
-  Internet["xml"][Post._plural_url()] = allPostsDetails;
-  Internet["xml"][User._singular_url(1, {lite: true})] = {'user': {'first-name' : 'eric'}};
-  Internet["xml"][User._plural_url({admin: true})] = {'users': {'user': [ericDetails, chadDetails]}};
-  Internet["xml"][User._plural_url({admin: false})] = {'users': {'user': johnDetails}};
-  Internet["xml"][User._new_url()] = {'user' : newUserDetails};
-  Internet["json"][User._singular_url(1)] = ericJSON;
-  Internet["json"][Post._singular_url(1)] = postJSON;
+  Internet[User._singular_url(1)] = {'user': ericDetails};
+  Internet[User._singular_url(2)] = {'user': johnDetails};
+  Internet[User._singular_url(3)] = {'user': chadDetails};
+  Internet[Post._singular_url(1)] = {'post': postDetails1};
+  Internet[Post._singular_url(2)] = {'post': postDetails2};
+  Internet[Post._singular_url(3)] = {'post': postDetails3};
+  Internet[User._plural_url()] = allUsersDetails;
+  Internet[Post._plural_url()] = allPostsDetails;
+  Internet[User._singular_url(1, {lite: true})] = {'user': {'first-name' : 'eric'}};
+  Internet[User._plural_url({admin: true})] = {'users': {'user': [ericDetails, chadDetails]}};
+  Internet[User._plural_url({admin: false})] = {'users': {'user': johnDetails}};
+  Internet[User._new_url()] = {'user' : newUserDetails};
 
 
   // used to make sure callbacks get called
@@ -110,9 +119,9 @@ function setUp () {
   Base.requestAndParse = function (format, callback, url, options, user_callback) {
     call = function(doc) {change(); return callback(doc);}
     if (callback)
-      return call(Internet[format][url]);
+      return call(Internet[url]);
     else
-      return Internet[format][url];
+      return Internet[url];
   }
 }
 
@@ -171,6 +180,13 @@ function testFind () {
   // test that I can use options form but force it to be synchronous anyway
   var eric = User.find(1, {}, {asynchronous: false})
   assertEquals('eric', eric.first_name);
+  
+  // test JSON find
+  Base.model("User", {language: "json"})
+  var eric = User.find(1)
+  assertEquals("Eric wasn't found through JSON find(1).", 'eric', eric.first_name);
+  assertEquals("ID didn't get transformed using JSON.", 1, eric.id);
+  assertEquals("1", eric.admin);
 }
 
 function testFindAll () {  
@@ -192,7 +208,7 @@ function testFindAll () {
   });
   
   // test that there's no issue with one element arrays in XML
-  Internet["xml"][User._plural_url()] = allWithOneUserDetails;
+  Internet[User._plural_url()] = allWithOneUserDetails;
   var users = User.find("all");
   assertEquals(1, users.length);
   
@@ -201,6 +217,12 @@ function testFindAll () {
   assertEquals(2, admins.length);
   assertEquals("eric", admins[0].first_name);
   assertEquals("chad", admins[1].first_name);
+  
+  // JSON find all
+  Base.model("User", {language: "json"})
+  var users = User.find("all");
+  assertEquals("Found eric as first user in JSON :all", "eric", users[0].first_name)
+  assertEquals("Found john as second user in JSON :all", "john", users[1].first_name)
 }
 
 function testFindFirst () {
@@ -226,13 +248,13 @@ function testReload () {
   var eric = User.find(1)
   
   // fake that the user details got updated
-  Internet["xml"][User._singular_url(1)] = {'user': johnDetails}
+  Internet[User._singular_url(1)] = {'user': johnDetails}
   
   eric.reload();
   assertEquals("john", eric.first_name)
   
   // switch back
-  Internet["xml"][User._singular_url(2)] = {'user': ericDetails}
+  Internet[User._singular_url(2)] = {'user': ericDetails}
   
   eric.reload(function(ignoreMe) {
     assertEquals("eric", eric.first_name)
@@ -255,7 +277,7 @@ function testRelations () {
   assertEquals("has_many object should have correct singular form.", "post", eric.posts[0]._singular);
   assertEquals("has_many object should have correct plural form.", "posts", eric.posts[1]._plural);
   
-  Internet["xml"][Post._singular_url(1)] = {'post': postIncludeDetails};
+  Internet[Post._singular_url(1)] = {'post': postIncludeDetails};
   var post = Post.find(1);
   assertEquals("has_one object should have correct name.", "User", post.user._name);
   assertEquals("has_one object should have correct singular form.", "user", post.user._singular);
