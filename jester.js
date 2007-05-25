@@ -63,7 +63,7 @@ Base.requestAndParse = function(format, callback, url, options, user_callback) {
   parse_and_callback = null;
   if (format.toLowerCase() == "json") {
     parse_and_callback = function(transport) {
-      eval("var attributes = " + transport.responseText);
+      eval("var attributes = " + transport.responseText); // hashes need this kind of eval
       return callback(attributes);
     }
   }
@@ -107,8 +107,8 @@ Object.extend(Base.prototype, {
   valid : function() {return ! this.errors.any();},
   
   find : function(id, params, callback) {
-    findAllWork = function(raw) {
-      var collection = this._loadCollection(raw);
+    findAllWork = function(doc) {
+      var collection = this._loadCollection(doc);
       
       // This is better than requiring the controller to support a "limit" parameter
       if (id == "first")
@@ -117,8 +117,8 @@ Object.extend(Base.prototype, {
       return collection;
     }.bind(this);
     
-    findOneWork = function(raw) {
-      var base = this._loadSingle(raw);
+    findOneWork = function(doc) {
+      var base = this._loadSingle(doc);
       
       // even if the ID didn't come back, we obviously knew the ID to search with, so set it
       if (!base._properties.include("id")) base._setAttribute("id", parseInt(id))
@@ -305,29 +305,29 @@ Object.extend(Base.prototype, {
     Internal methods.
   */
   
-  _loadSingle : function(raw) {
+  _loadSingle : function(doc) {
     var attributes;
     if (this._language == "json")
-      attributes = this._attributesFromJSON(raw);
+      attributes = this._attributesFromJSON(doc);
     else
-      attributes = this._attributesFromTree(raw[this._singular]);
+      attributes = this._attributesFromTree(doc[this._singular]);
     
     return this.build(attributes);
   },
   
-  _loadCollection : function(raw) {
+  _loadCollection : function(doc) {
     var collection;
     if (this._language == "json") {
-      collection = raw.map(function(item) {
+      collection = doc.map(function(item) {
         return this.build(this._attributesFromJSON(item));
       }.bind(this));
     }
     else {
       // if only one result, wrap it in an array
-      if (!Base.elementHasMany(raw[this._plural]))
-        raw[this._plural][this._singular] = [raw[this._plural][this._singular]];
+      if (!Base.elementHasMany(doc[this._plural]))
+        doc[this._plural][this._singular] = [doc[this._plural][this._singular]];
       
-      collection = raw[this._plural][this._singular].map(function(elem) {
+      collection = doc[this._plural][this._singular].map(function(elem) {
         return this.build(this._attributesFromTree(elem));
       }.bind(this));
     }
@@ -337,7 +337,7 @@ Object.extend(Base.prototype, {
   // Converts a JSON hash returns from ActiveRecord::Base#to_json into a hash of attribute values
   // Does not handle associations, as AR's #to_json doesn't either
   // Also, JSON doesn't include room to store types, so little auto-transforming is done here (just on 'id')
-  _attributesFromJSON : function(json) {
+  _attributesFromJSON : function(json) {    
     if (!(json && json.attributes)) return false;
     
     var attributes = {}
@@ -443,7 +443,12 @@ Object.extend(Base.prototype, {
   
     // Pulls errors from JSON
   _errorsFromJSON : function(json) {
-    json = eval(json);
+    try {
+      json = eval(json); // okay for arrays
+    } catch(e) {
+      return false;
+    }
+    
     if (!(json && json.constructor == Array && json[0] && json[0].constructor == Array)) return false;
     
     return json.map(function(pair) {
