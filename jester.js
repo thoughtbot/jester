@@ -223,8 +223,10 @@ Object.extend(Base.prototype, {
           this._setErrors(errors);
         else {
           var attributes;
-          if (this._language == "json")
+          if (this._language == "json") {
             attributes = this._attributesFromJSON(transport.responseText);
+            alert(attributes);
+          }
           else {
             var doc = Base._tree.parseXML(transport.responseText);
             attributes = this._attributesFromTree(doc[this._singular]);
@@ -336,9 +338,9 @@ Object.extend(Base.prototype, {
   // Does not handle associations, as AR's #to_json doesn't either
   // Also, JSON doesn't include room to store types, so little auto-transforming is done here (just on 'id')
   _attributesFromJSON : function(json) {
-    var attributes = {}
-    if (!json) return attributes;
+    if (!(json && json.attributes)) return false;
     
+    var attributes = {}
     for (var attr in json.attributes) {
       var value = json.attributes[attr];
       if (attr == "id")
@@ -432,26 +434,26 @@ Object.extend(Base.prototype, {
   },
   
   _errorsFrom : function(raw) {
-    if (this._language == "json")
+    if (this._language == "json") {
       return this._errorsFromJSON(raw);
+    }
     else
       return this._errorsFromXML(raw);
   },
   
     // Pulls errors from JSON
   _errorsFromJSON : function(json) {
-    eval("json = eval(json)");
-    if (!(json.constructor == Array && json[0] && json[0].constructor == Array)) return false;
+    json = eval(json);
+    if (!(json && json.constructor == Array && json[0] && json[0].constructor == Array)) return false;
     
-    var errors = json.map(function(pair) {
+    return json.map(function(pair) {
       return pair[0].capitalize() + " " + pair[1];
     });
-    
-    return errors;
   },
   
   // Pulls errors from XML
   _errorsFromXML : function(xml) {
+    if (!xml) return false;
     var doc = Base._tree.parseXML(xml);
 
     if (doc.errors) {

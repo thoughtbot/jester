@@ -502,12 +502,18 @@ function testAttributesFromTree() {
 }
 
 function testErrorsFromJSON() {
-  var errorJSON = [["name", "can't be blank"], ["city", "can't be blank"]];
+  var errorJSON = '[["name", "can\'t be blank"], ["city", "can\'t be blank"]]';
   var errors = User._errorsFromJSON(errorJSON);
   
   assertEquals(2, errors.length);
   assertEquals("Name can't be blank", errors[0]);
 	assertEquals("City can't be blank", errors[1]);
+	
+  assertEquals(false, User._errorsFromJSON(' '));
+  assertEquals(false, User._errorsFromJSON(''));
+  assertEquals(false, User._errorsFromJSON(null));
+  assertEquals(false, User._errorsFromJSON([]));
+  assertEquals(false, User._errorsFromJSON({}));
 }
 
 function testErrorsFromXML() {
@@ -517,9 +523,11 @@ function testErrorsFromXML() {
 	assertEquals(2, errors.length);
 	assertEquals("Name can't be blank", errors[0]);
 	assertEquals("City can't be blank", errors[1]);
+	
+	assertEquals(false, User._errorsFromXML(' '));
+  assertEquals(false, User._errorsFromXML(''));
+  assertEquals(false, User._errorsFromXML(null));
 }
-
-
 
 /********************************************
  ************ INTERNAL TESTS ****************
