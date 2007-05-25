@@ -116,13 +116,22 @@ function setUp () {
   changed = false;
   
   Base.requestAndParse = function (format, callback, url, options, user_callback) {
-    changed = true;
     var result = Internet[url];
     
     if (format == "json")
       eval('result = ' + result);
     if (callback)
       result = callback(result);
+    if (user_callback) {
+      changed = true;
+      if (typeof(user_callback) == "function")
+        result = user_callback(result);
+      else {
+        user_callback = user_callback.on200 || user_callback.onComplete;
+        if (user_callback)
+          result = user_callback(result);
+      }
+    }
     
     return result;
   }

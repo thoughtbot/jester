@@ -58,7 +58,7 @@ Base.requestXML = function(callback, url, options, user_callback) {return Base.r
 
 Base.requestJSON = function(callback, url, options, user_callback) {return Base.requestAndParse("json", callback, url, options, user_callback);}
 
-// does a request that expects XML, and parses it on return before passing it back
+// does a request that expects XML or JSON, and parses it on return before passing it back
 Base.requestAndParse = function(format, callback, url, options, user_callback) {
   parse_and_callback = null;
   if (format.toLowerCase() == "json") {
@@ -93,7 +93,7 @@ Base.request = function(callback, url, options, user_callback) {
   
   if (options.asynchronous) {
     if (user_callback)
-      options.onComplete = function(transport) {user_callback(callback(transport));}
+      options.onComplete = function(transport, json) {user_callback(callback(transport), json);}
     else
       options.onComplete = function(transport) {callback(transport);}
     return new Ajax.Request(url, options).transport;
