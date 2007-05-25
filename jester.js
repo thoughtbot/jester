@@ -58,7 +58,7 @@ Base.requestXML = function(callback, url, options, user_callback) {return Base.r
 
 Base.requestJSON = function(callback, url, options, user_callback) {return Base.requestAndParse("json", callback, url, options, user_callback);}
 
-// does a request that expects XML or JSON, and parses it on return before passing it back
+// does a request that expects XML, and parses it on return before passing it back
 Base.requestAndParse = function(format, callback, url, options, user_callback) {
   parse_and_callback = null;
   if (format.toLowerCase() == "json") {
@@ -93,7 +93,7 @@ Base.request = function(callback, url, options, user_callback) {
   
   if (options.asynchronous) {
     if (user_callback)
-      options.onComplete = function(transport, json) {user_callback(callback(transport), json);}
+      options.onComplete = function(transport) {user_callback(callback(transport));}
     else
       options.onComplete = function(transport) {callback(transport);}
     return new Ajax.Request(url, options).transport;
@@ -107,7 +107,7 @@ Object.extend(Base.prototype, {
   valid : function() {return ! this.errors.any();},
   
   find : function(id, params, callback) {
-    findAllWork = function(doc) {
+    var findAllWork = function(doc) {
       var collection = this._loadCollection(doc);
       
       // This is better than requiring the controller to support a "limit" parameter
@@ -117,7 +117,7 @@ Object.extend(Base.prototype, {
       return collection;
     }.bind(this);
     
-    findOneWork = function(doc) {
+    var findOneWork = function(doc) {
       var base = this._loadSingle(doc);
       
       // even if the ID didn't come back, we obviously knew the ID to search with, so set it
@@ -138,7 +138,7 @@ Object.extend(Base.prototype, {
   },
   
   reload : function(callback) {
-    reloadWork = function(copy) {
+    var reloadWork = function(copy) {
       this._resetAttributes(copy.attributes(true));
   
       if (callback)
@@ -161,7 +161,7 @@ Object.extend(Base.prototype, {
   build : function(attributes, options) {
     var base = new Base(this._name, {singular: this._singular, prefix: this._prefix, plural: this._plural, language: this._language});
     
-    buildWork = function(doc) {
+    var buildWork = function(doc) {
       base._resetAttributes(base._attributesFromTree(doc[base._singular]));
     }
     
@@ -200,7 +200,7 @@ Object.extend(Base.prototype, {
     var id = given_id || this.id;
     if (!id) return false;
     
-    destroyWork = function(transport) {
+    var destroyWork = function(transport) {
       if (transport.status == 200) {
         if (!given_id || this.id == given_id)
           this.id = null;
@@ -214,7 +214,7 @@ Object.extend(Base.prototype, {
   },
   
   save : function(callback) {
-    saveWork = function(transport) {
+    var saveWork = function(transport) {
       var saved = false;
 
       if (transport.responseText) {
