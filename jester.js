@@ -108,42 +108,21 @@ Object.extend(Base.prototype, {
   
   find : function(id, params, callback) {
     findAllWork = function(raw) {
-      var results;
-      if (this._language == "json") {
-        if (raw.constructor == Array) {
-          self.raw = raw;
-          results = raw.map(function(item) {
-            return this.build(this._attributesFromJSON(item));
-          }.bind(this));
-        }
-      }
-      else {
-        // if only one result, wrap it in an array
-        if (!Base.elementHasMany(raw[this._plural]))
-          raw[this._plural][this._singular] = [raw[this._plural][this._singular]];
-        
-        results = raw[this._plural][this._singular].map(function(elem) {
-          return this.build(this._attributesFromTree(elem));
-        }.bind(this));
-      }
+      var collection = this._loadCollection(raw);
       
       // This is better than requiring the controller to support a "limit" parameter
       if (id == "first")
-        return results[0];
+        return collection[0];
         
-      return results; 
+      return collection;
     }.bind(this);
     
     findOneWork = function(raw) {
-      var attributes;
-      if (this._language == "json")
-        attributes = this._attributesFromJSON(raw);
-      else
-        attributes = this._attributesFromTree(raw[this._singular]);
-        
-      var base = this.build(attributes);
+      var base = this._loadSingle(raw);
+      
       // even if the ID didn't come back, we obviously knew the ID to search with, so set it
       if (!base._properties.include("id")) base._setAttribute("id", parseInt(id))
+      
       return base;
     }.bind(this);
     
@@ -239,13 +218,20 @@ Object.extend(Base.prototype, {
       var saved = false;
 
       if (transport.responseText) {
-        var doc = Base._tree.parseXML(transport.responseText);
-
-        if (doc.errors)
-          this._setErrors(this._errorsFromTree(doc.errors));
-          
-        else if (doc[this._singular])
-          this._resetAttributes(this._attributesFromTree(doc[this._singular]));
+        var errors = this._errorsFrom(transport.responseText);
+        if (errors)
+          this._setErrors(errors);
+        else {
+          var attributes;
+          if (this._language == "json")
+            attributes = this._attributesFromJSON(transport.responseText);
+          else {
+            var doc = Base._tree.parseXML(transport.responseText);
+            attributes = this._attributesFromTree(doc[this._singular]);
+          }
+          if (attributes)
+            this._resetAttributes(attributes);
+        }
       }
 
 
@@ -318,11 +304,32 @@ Object.extend(Base.prototype, {
   */
   
   _loadSingle : function(raw) {
-  
+    var attributes;
+    if (this._language == "json")
+      attributes = this._attributesFromJSON(raw);
+    else
+      attributes = this._attributesFromTree(raw[this._singular]);
+    
+    return this.build(attributes);
   },
   
   _loadCollection : function(raw) {
-  
+    var collection;
+    if (this._language == "json") {
+      collection = raw.map(function(item) {
+        return this.build(this._attributesFromJSON(item));
+      }.bind(this));
+    }
+    else {
+      // if only one result, wrap it in an array
+      if (!Base.elementHasMany(raw[this._plural]))
+        raw[this._plural][this._singular] = [raw[this._plural][this._singular]];
+      
+      collection = raw[this._plural][this._singular].map(function(elem) {
+        return this.build(this._attributesFromTree(elem));
+      }.bind(this));
+    }
+    return collection;
   },
   
   // Converts a JSON hash returns from ActiveRecord::Base#to_json into a hash of attribute values
@@ -333,9 +340,13 @@ Object.extend(Base.prototype, {
     if (!json) return attributes;
     
     for (var attr in json.attributes) {
-      value = json.attributes[attr];
+      var value = json.attributes[attr];
       if (attr == "id")
         value = parseInt(value);
+      else if (attr.match(/(created_at|created_on|updated_at|updated_on)/)) {
+        var date = Date.parse(value);
+        if (date && !isNaN(date)) value = date;
+      }
       attributes[attr] = value;
     }
     return attributes;
@@ -420,23 +431,41 @@ Object.extend(Base.prototype, {
     return attributes;
   },
   
-    // Pulls errors from JSON
-  _errorsFromJSON : function(errors) {
-  
+  _errorsFrom : function(raw) {
+    if (this._language == "json")
+      return this._errorsFromJSON(raw);
+    else
+      return this._errorsFromXML(raw);
   },
   
-  // Pulls errors from XML
-  _errorsFromTree : function(elements) {
-  
-    var errors = [];
-    if (typeof(elements.error) == "string")
-      elements.error = [elements.error];
+    // Pulls errors from JSON
+  _errorsFromJSON : function(json) {
+    eval("json = eval(json)");
+    if (!(json.constructor == Array && json[0] && json[0].constructor == Array)) return false;
     
-    elements.error.each(function(value, index) {
-      errors.push(value);
+    var errors = json.map(function(pair) {
+      return pair[0].capitalize() + " " + pair[1];
     });
     
     return errors;
+  },
+  
+  // Pulls errors from XML
+  _errorsFromXML : function(xml) {
+    var doc = Base._tree.parseXML(xml);
+
+    if (doc.errors) {
+      var errors = [];
+      if (typeof(doc.errors.error) == "string")
+        doc.errors.error = [doc.errors.error];
+      
+      doc.errors.error.each(function(value, index) {
+        errors.push(value);
+      });
+      
+      return errors;
+    }
+    else return false;
   },
   
   // Sets errors with an array.  Could be extended at some point to include breaking error messages into pairs (attribute, msg).

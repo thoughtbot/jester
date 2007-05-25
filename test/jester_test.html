@@ -484,6 +484,44 @@ function testUpdateAttributes() {
 }
 
 /********************************************
+ ************* PARSING TESTS ****************
+ ********************************************/
+ 
+function testAttributesFromJSON() {
+  var attributes = User._attributesFromJSON(ericJSON);
+  assertEquals("The ID should be auto-transformed from JSON.", 1, attributes.id);
+  assertEquals("1", attributes.admin.toString()); // toString() since "1" == true
+  assertEquals("eric", attributes.first_name);
+}
+
+function testAttributesFromTree() {
+  var attributes = User._attributesFromTree(ericDetails);
+  assertEquals("Integers auto-transformed from XML.", 1, attributes.id);
+  assert(attributes.admin);
+  assertEquals("eric", attributes.first_name);
+}
+
+function testErrorsFromJSON() {
+  var errorJSON = [["name", "can't be blank"], ["city", "can't be blank"]];
+  var errors = User._errorsFromJSON(errorJSON);
+  
+  assertEquals(2, errors.length);
+  assertEquals("Name can't be blank", errors[0]);
+	assertEquals("City can't be blank", errors[1]);
+}
+
+function testErrorsFromXML() {
+	var errorXML = "<errors><error>Name can't be blank</error><error>City can't be blank</error></errors>"
+	var errors = User._errorsFromXML(errorXML);
+	
+	assertEquals(2, errors.length);
+	assertEquals("Name can't be blank", errors[0]);
+	assertEquals("City can't be blank", errors[1]);
+}
+
+
+
+/********************************************
  ************ INTERNAL TESTS ****************
  ********************************************/
 
@@ -569,32 +607,6 @@ function testNewRecordCheck () {
   
   eric.id = 1;
   assert(! eric.new_record());
-}
-
-function testAttributesFromJSON() {
-  var attributes = User._attributesFromJSON(ericJSON);
-  assertEquals("The ID should be auto-transformed from JSON.", 1, attributes.id);
-  assertEquals("1", attributes.admin.toString()); // toString() since "1" == true
-  assertEquals("eric", attributes.first_name);
-}
-
-function testAttributesFromTree() {
-  var attributes = User._attributesFromTree(ericDetails);
-  assertEquals("Integers auto-transformed from XML.", 1, attributes.id);
-  assert(attributes.admin);
-  assertEquals("eric", attributes.first_name);
-}
-
-function testErrorsFromJSON() {
-}
-
-function testErrorsFromTree () {
-	var errorTree = { 'error' : ["Name can't be blank", "City can't be blank"] }
-	var errors = User._errorsFromTree(errorTree);
-	
-	assertEquals(2, errors.length);
-	assertEquals("Name can't be blank", errors[0]);
-	assertEquals("City can't be blank", errors[1]);
 }
 
 function testSetErrors () {
