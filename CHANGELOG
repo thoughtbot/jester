@@ -1,3 +1,20 @@
+Version 1.3
+
+  * JSON support.  Specify that all requests will be posting to .json URLs, and parsing JSON responses, by setting the "language" option inside Base.model().  This option defaults to "xml".
+    
+      Base.model("User", {language: "json"})
+  
+    Using JSON, most attributes will not be cast into their type.  The "id" column will be cast to an integer, and if a field is named "created_on", "created_at", "updated_at", or "updated_on", it will be parsed into a Date object.
+  
+  * Now passes through Prototype's optional "json" argument to Ajax callbacks.  If an X-JSON header came back with the response from an Ajax request, Prototype will return this json alongside the transport object.
+  
+      User.save(function(user, json) {yourHandler(json);})
+      
+  * Added helper methods updateAttributes(), and setAttributes().  Both set the attributes of the object to the passed hash, however updateAttributes() will call save the object when done.  For this reason, updateAttributes() accepts a 2nd optional callback argument (either a function or a Prototype Ajax.Request options hash).
+  
+  * Now safe to use Prototype-style hashes (using $H) when calling build, create, setAttributes, or updateAttributes.
+
+
 ========================
 Version 1.2 (April 30th)
 ========================
