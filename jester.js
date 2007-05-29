@@ -93,7 +93,7 @@ Base.request = function(callback, url, options, user_callback) {
   
   if (options.asynchronous) {
     if (user_callback)
-      options.onComplete = function(transport) {user_callback(callback(transport));}
+      options.onComplete = function(transport, json) {user_callback(callback(transport), json);}
     else
       options.onComplete = function(transport) {callback(transport);}
     return new Ajax.Request(url, options).transport;
