@@ -87,8 +87,8 @@ function setUp () {
   Internet = {}
   
   // initiate models
-  Base.model("User", {language: "json"})
-  Base.model("Post", {language: "json"})
+  Base.model("User", {format: "json"})
+  Base.model("Post", {format: "json"})
   
   Internet[User._singular_url(1)] = ericJSON;
   Internet[Post._singular_url(1)] = postJSON;
@@ -150,9 +150,9 @@ function testFind () {
 	assertEquals('users', eric._plural);
 	
 	assertEquals("Attributes should be filled in correctly on find().", 'eric', eric.first_name);
-	assert("Boolean attributes should be auto-transformed (when language is XML).", eric.admin);
-	assertEquals("Date attributes should be auto-transformed (when language is XML).", Date, eric.created_at.constructor);
-	assertEquals("Integer attributes should be auto-transformed (when language is XML).", 1, eric.id);
+	assert("Boolean attributes should be auto-transformed (when format is XML).", eric.admin);
+	assertEquals("Date attributes should be auto-transformed (when format is XML).", Date, eric.created_at.constructor);
+	assertEquals("Integer attributes should be auto-transformed (when format is XML).", 1, eric.id);
 
 	assertEquals("Eric should have two posts.", 2, eric.posts.length);
 	assertEquals("Eric's first post should have ID 1.", 1, eric.posts[0].id);
@@ -194,7 +194,7 @@ function testFind () {
   assertEquals('eric', eric.first_name);
   
   // test JSON find
-  Base.model("User", {language: "json"})
+  Base.model("User", {format: "json"})
   var eric = User.find(1)
   assertEquals("Eric wasn't found through JSON find(1).", 'eric', eric.first_name);
   assertEquals("ID didn't get transformed using JSON.", 1, eric.id);
@@ -231,7 +231,7 @@ function testFindAll () {
   assertEquals("chad", admins[1].first_name);
   
   // JSON find all
-  Base.model("User", {language: "json"})
+  Base.model("User", {format: "json"})
   var users = User.find("all");
   assertEquals("Found eric as first user in JSON :all", "eric", users[0].first_name)
   assertEquals("Found john as second user in JSON :all", "john", users[1].first_name)

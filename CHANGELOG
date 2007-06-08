@@ -5,9 +5,9 @@ Version 1.3 (June 10th)
   Release post:
   http://giantrobots.thoughtbot.com/2007/6/10/jester-1-3-jsonic-rest
 
-  * JSON support.  Specify that all requests will be posting to .json URLs, and parsing JSON responses, by setting the "language" option inside Base.model().  This option defaults to "xml".
+  * JSON support.  Specify that all requests will be posting to .json URLs, and parsing JSON responses, by setting the "format" option inside Base.model().  This option defaults to "xml".
     
-      Base.model("User", {language: "json"})
+      Base.model("User", {format: "json"})
   
     Using JSON, most attributes will not be cast into their type.  The "id" column will be cast to an integer, and if a field is named "created_on", "created_at", "updated_at", or "updated_on", it will be parsed into a Date object.
   

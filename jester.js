@@ -20,10 +20,10 @@ function Base(name, options) {
 
   this._name = name;
   
-  if (options.language)
-    this._language = options.language.toLowerCase();
+  if (options.format)
+    this._format = options.format.toLowerCase();
   else
-    this._language = "xml";
+    this._format = "xml";
   
   if (options.singular)
     this._singular = options.singular;
@@ -128,12 +128,12 @@ Object.extend(Base.prototype, {
     
     if (id == "first" || id == "all") {
       var url = this._plural_url(params);
-      return Base.requestAndParse(this._language, findAllWork, url, {}, callback);
+      return Base.requestAndParse(this._format, findAllWork, url, {}, callback);
     }
     else {
       if (isNaN(parseInt(id))) return null;
       var url = this._singular_url(id, params);
-      return Base.requestAndParse(this._language, findOneWork, url, {}, callback);
+      return Base.requestAndParse(this._format, findOneWork, url, {}, callback);
     }
   },
   
@@ -159,7 +159,7 @@ Object.extend(Base.prototype, {
   
   // This function would be named "new", if JavaScript in IE allowed that.
   build : function(attributes, options) {
-    var base = new Base(this._name, {singular: this._singular, prefix: this._prefix, plural: this._plural, language: this._language});
+    var base = new Base(this._name, {singular: this._singular, prefix: this._prefix, plural: this._plural, format: this._format});
     
     var buildWork = function(doc) {
       base._resetAttributes(base._attributesFromTree(doc[base._singular]));
@@ -223,9 +223,8 @@ Object.extend(Base.prototype, {
           this._setErrors(errors);
         else {
           var attributes;
-          if (this._language == "json") {
+          if (this._format == "json") {
             attributes = this._attributesFromJSON(transport.responseText);
-            alert(attributes);
           }
           else {
             var doc = Base._tree.parseXML(transport.responseText);
@@ -307,7 +306,7 @@ Object.extend(Base.prototype, {
   
   _loadSingle : function(doc) {
     var attributes;
-    if (this._language == "json")
+    if (this._format == "json")
       attributes = this._attributesFromJSON(doc);
     else
       attributes = this._attributesFromTree(doc[this._singular]);
@@ -317,7 +316,7 @@ Object.extend(Base.prototype, {
   
   _loadCollection : function(doc) {
     var collection;
-    if (this._language == "json") {
+    if (this._format == "json") {
       collection = doc.map(function(item) {
         return this.build(this._attributesFromJSON(item));
       }.bind(this));
@@ -434,7 +433,7 @@ Object.extend(Base.prototype, {
   },
   
   _errorsFrom : function(raw) {
-    if (this._language == "json") {
+    if (this._format == "json") {
       return this._errorsFromJSON(raw);
     }
     else
@@ -546,19 +545,19 @@ Object.extend(Base.prototype, {
     if (params) params = $H(params);
       
     if (id || this.id)
-      return this._prefix + "/" + this._plural + "/" + (id || this.id) + "." + this._language + (params && params.any() ? "?" + params.toQueryString() : "");
+      return this._prefix + "/" + this._plural + "/" + (id || this.id) + "." + this._format + (params && params.any() ? "?" + params.toQueryString() : "");
     else
       return "";
   },
   
   _plural_url : function(params) {
     params = $H(params);
-    return this._prefix + "/" + this._plural + "." + this._language + (params && params.any() ? "?" + params.toQueryString() : "");
+    return this._prefix + "/" + this._plural + "." + this._format + (params && params.any() ? "?" + params.toQueryString() : "");
   },
   
   _new_url : function(params) {
     params = $H(params);
-    return this._prefix + "/" + this._plural + "/new." + this._language + (params && params.any() ? "?" + params.toQueryString() : "");
+    return this._prefix + "/" + this._plural + "/new." + this._format + (params && params.any() ? "?" + params.toQueryString() : "");
   },
   
   // coming soon
