@@ -426,7 +426,7 @@ Object.extend(Base.prototype, {
       }
       
       // transform attribute name if needed
-      attribute = attr.replace(/-/, "_");
+      attribute = attr.replace(/-/g, "_");
       attributes[attribute] = value;
     }
     
