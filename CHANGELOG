@@ -1,4 +1,9 @@
-Version 1.3
+========================
+Version 1.3 (June 10th)
+========================
+
+  Release post:
+  http://giantrobots.thoughtbot.com/2007/6/10/jester-1-3-jsonic-rest
 
   * JSON support.  Specify that all requests will be posting to .json URLs, and parsing JSON responses, by setting the "language" option inside Base.model().  This option defaults to "xml".
     
@@ -13,6 +18,8 @@ Version 1.3
   * Added helper methods updateAttributes(), and setAttributes().  Both set the attributes of the object to the passed hash, however updateAttributes() will call save the object when done.  For this reason, updateAttributes() accepts a 2nd optional callback argument (either a function or a Prototype Ajax.Request options hash).
   
   * Now safe to use Prototype-style hashes (using $H) when calling build, create, setAttributes, or updateAttributes.
+  
+  * Bug fix on translating dashes to underscores in field names.  Thanks to Pete Forde for the patch.
 
 
 ========================
