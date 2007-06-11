@@ -11,11 +11,6 @@
        "/public/forum" => http://www.thoughtbot.com:8080/public/forum
 */
 function Base(name, options) {
-  // We delay instantiating XML.ObjTree() so that it can be listed at the end of this file instead of the beginning
-  if (!Base._tree) {
-    Base._tree = new XML.ObjTree();
-    Base._tree.attr_prefix = "@";
-  }
   if (!options) options = {};
 
   this._name = name;
@@ -24,6 +19,13 @@ function Base(name, options) {
     this._format = options.format.toLowerCase();
   else
     this._format = "xml";
+    
+  // We delay instantiating XML.ObjTree() so that it can be listed at the end of this file instead of the beginning,
+  // and so it doesn't have to exist at all unless the format is XML
+  if (!Base._tree && this._format == "xml") {
+    Base._tree = new XML.ObjTree();
+    Base._tree.attr_prefix = "@";
+  }
   
   if (options.singular)
     this._singular = options.singular;
@@ -33,7 +35,7 @@ function Base(name, options) {
   this._plural = this._singular.pluralize(options.plural);
   
   // Establish prefix
-  default_prefix = function() {return "http://" + window.location.hostname + (window.location.port ? ":" + window.location.port : "");}
+  var default_prefix = function() {return "http://" + window.location.hostname + (window.location.port ? ":" + window.location.port : "");}
   if (options.prefix) {
     if (!options.prefix.match(/^http:/))
        this._prefix = default_prefix() + (options.prefix.match(/^\//) ? "" : "/") + options.prefix
@@ -344,7 +346,7 @@ Object.extend(Base.prototype, {
       var value = json.attributes[attr];
       if (attr == "id")
         value = parseInt(value);
-      else if (attr.match(/(created_at|created_on|updated_at|updated_on)/)) {
+      else if (attr.match(/^.+(_at|_on)$/)) {
         var date = Date.parse(value);
         if (date && !isNaN(date)) value = date;
       }

@@ -505,6 +505,7 @@ function testAttributesFromJSON() {
   assertEquals("The ID should be auto-transformed from JSON.", 1, attributes.id);
   assertEquals("1", attributes.admin.toString()); // toString() since "1" == true
   assertEquals("eric", attributes.first_name);
+  assertEquals(Date, attributes.created_at.constructor)
   
   assertEquals(false, User._attributesFromJSON({}));
   assertEquals(false, User._attributesFromJSON({email: "emill@thoughtbot.com", id: "1"}));
