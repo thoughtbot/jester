@@ -62,6 +62,14 @@ function setUp () {
     }
   }
   
+  // Chad with ID 1, for testing remote site support
+  remoteChad = {
+    'id' : { '@type' : 'integer', '#text' : '1' },
+    'first-name' : 'chad',
+    'admin' : { '@type' : 'boolean', '#text' : 'true' },
+    'created_at' : { '@type' : 'datetime', '#text' : '2007-04-10T15:12:06-04:00' }
+  }
+  
   // test for belongs_to, separate from normal universe
   postIncludeDetails = { 
     'id' : { '@type' : 'integer', '#text' : '3' },
@@ -83,8 +91,19 @@ function setUp () {
     'created_at' : { '@type' : 'datetime' }
   }
   
+  // JSON callback
+  jesterCallback = null;
+  
   // mock out the Internet
   Internet = {}
+  
+  // initiate models
+  Base.model("User", {prefix: "http://www.thoughtbot.com", format: "json"})
+  Base.model("Post", {prefix: "http://www.thoughtbot.com", format: "json"})
+  
+  Internet[User._singular_url(1)] = "jesterCallback(" + ericJSON + ");";
+  Internet[Post._singular_url(1)] = "jesterCallback(" + postJSON + ");";
+  Internet[User._plural_url()] = "jesterCallback(" + usersJSON + ");";
   
   // initiate models
   Base.model("User", {format: "json"})
@@ -114,8 +133,20 @@ function setUp () {
 
   // used to make sure callbacks get called
   changed = false;
+  assert_changed = function() {assert(changed); changed = false;}
   
-  Base.requestAndParse = function (format, callback, url, options, user_callback) {
+  Base.requestAndParse = function (format, callback, url, options, user_callback, remote) {
+    if (remote && format == "json") {
+      jesterCallback = function(json){
+        result = callback(json);
+        if (user_callback && typeof(user_callback) == "function") {
+          changed = true;
+          user_callback(result);
+        }
+      }
+      return eval(Internet[url]);
+    }
+  
     var result = Internet[url];
     
     if (format == "json")
@@ -171,34 +202,40 @@ function testFind () {
 	// test function form of callback
 	User.find(1, {}, function(eric) {
     assertEquals('eric', eric.first_name);
-    assert(changed);
-    changed = false;
+    assert_changed();
   });
   
   // test options form of callback
   User.find(1, {}, {on200: function(eric) {
     assertEquals('eric', eric.first_name);
-    assert(changed);
-    changed = false;
+    assert_changed();
   }});
   
   // test onComplete is preserved
   User.find(1, {}, {onComplete: function(eric) {
     assertEquals('eric', eric.first_name);
-    assert(changed);
-    changed = false;
+    assert_changed();
   }});
   
   // test that I can use options form but force it to be synchronous anyway
-  var eric = User.find(1, {}, {asynchronous: false})
+  var eric = User.find(1, {}, {asynchronous: false});
   assertEquals('eric', eric.first_name);
   
   // test JSON find
   Base.model("User", {format: "json"})
-  var eric = User.find(1)
+  var eric = User.find(1);
   assertEquals("Eric wasn't found through JSON find(1).", 'eric', eric.first_name);
   assertEquals("ID didn't get transformed using JSON.", 1, eric.id);
-  assertEquals("1", eric.admin);
+  assertEquals("1", eric.admin.toString());
+  
+  // test Remote find
+  Base.model("User", {prefix: "http://www.thoughtbot.com", format: "json"})
+  var eric;
+  User.find(1, {}, function(eric) {
+    assertEquals("Eric wasn't found through remote find(1).", 'eric', eric.first_name);
+    assertEquals("1", eric.admin.toString());
+    assert_changed();
+  });
 }
 
 function testFindAll () {  
@@ -216,7 +253,7 @@ function testFindAll () {
   User.find('all', {}, function(users) {
     assertEquals(3, users.length);
     assertEquals(eric.constructor, users[0].constructor);
-    assert(changed);
+    assert_changed();
   });
   
   // test that there's no issue with one element arrays in XML
@@ -232,9 +269,18 @@ function testFindAll () {
   
   // JSON find all
   Base.model("User", {format: "json"})
-  var users = User.find("all");
+  var users = User.find('all');
   assertEquals("Found eric as first user in JSON :all", "eric", users[0].first_name)
   assertEquals("Found john as second user in JSON :all", "john", users[1].first_name)
+  
+  // Remote find all
+  var users;
+  User.find('all', {}, function(users) {
+    assert_changed();
+    assertEquals(2, users.length);
+    assertEquals("Found eric as first user in JSON :all", "eric", users[0].first_name)
+    assertEquals("Found john as second user in JSON :all", "john", users[1].first_name)
+  });
 }
 
 function testFindFirst () {
@@ -247,7 +293,7 @@ function testFindFirst () {
   User.find('first', {}, function(eric) {
     assertEquals(eric.first_name, eric2.first_name);
     assertEquals(eric.constructor, eric2.constructor);
-    assert(changed);
+    assert_changed();
   });
   
   // with params
@@ -270,7 +316,7 @@ function testReload () {
   
   eric.reload(function(ignoreMe) {
     assertEquals("eric", eric.first_name)
-    assert(changed);
+    assert_changed();
   });
 }
 
@@ -370,7 +416,7 @@ function testDestroy () {
   eric.destroy(function(result) {
     assertEquals(eric, eric.destroy());
     assertNull(eric.id);
-    assert(changed);
+    assert_changed();
   });	
 }
 
@@ -393,7 +439,7 @@ function testSaveNewRecord () {
 	eric.save(function(saved) {
     assert(saved);
     assertEquals(1, eric.id);
-    assert(changed);
+    assert_changed();
   });
 }
 
@@ -409,7 +455,7 @@ function testSaveExistingRecord () {
 	
 	eric.save(function(saved) {
     assert(saved);
-    assert(changed);
+    assert_changed();
   });
 }
 

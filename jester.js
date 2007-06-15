@@ -39,8 +39,10 @@ function Base(name, options) {
   if (options.prefix) {
     if (!options.prefix.match(/^http:/))
        this._prefix = default_prefix() + (options.prefix.match(/^\//) ? "" : "/") + options.prefix
-    else
+    else {
       this._prefix = options.prefix;
+      this._remote = true;
+    }
   }
   else
     this._prefix = default_prefix();
@@ -53,15 +55,30 @@ function Base(name, options) {
   this.errors = [];
 }
 
+// universal Jester callback holder for remote JSON loading
+var jesterCallback;
+
 // Model declaration helper
 Base.model = function(name, options) {eval(name + " = new Base(name, options);")}
 
-Base.requestXML = function(callback, url, options, user_callback) {return Base.requestAndParse("xml", callback, url, options, user_callback);}
-
-Base.requestJSON = function(callback, url, options, user_callback) {return Base.requestAndParse("json", callback, url, options, user_callback);}
+Base.loadRemoteJSON = function(url, callback, user_callback) {
+  // tack on user_callback if there is one, and only if it's really a function
+  if (typeof(user_callback) == "function")
+    jesterCallback = function(doc) {user_callback(callback(doc));}
+  else
+    jesterCallback = callback;
+  
+  var script = document.createElement("script");
+  script.type = "text/javascript";
+  script.src = url + "?callback=jesterCallback";
+  document.firstChild.appendChild(script);
+}
 
 // does a request that expects XML, and parses it on return before passing it back
-Base.requestAndParse = function(format, callback, url, options, user_callback) {
+Base.requestAndParse = function(format, callback, url, options, user_callback, remote) {
+  if (remote && format == "json")
+    return Base.loadRemoteJSON(url, callback, user_callback)
+    
   parse_and_callback = null;
   if (format.toLowerCase() == "json") {
     parse_and_callback = function(transport) {
@@ -132,12 +149,12 @@ Object.extend(Base.prototype, {
     
     if (id == "first" || id == "all") {
       var url = this._plural_url(params);
-      return Base.requestAndParse(this._format, findAllWork, url, {}, callback);
+      return Base.requestAndParse(this._format, findAllWork, url, {}, callback, this._remote);
     }
     else {
       if (isNaN(parseInt(id))) return null;
       var url = this._singular_url(id, params);
-      return Base.requestAndParse(this._format, findOneWork, url, {}, callback);
+      return Base.requestAndParse(this._format, findOneWork, url, {}, callback, this._remote);
     }
   },
   
@@ -169,8 +186,8 @@ Object.extend(Base.prototype, {
       base._resetAttributes(base._attributesFromTree(doc[base._singular]));
     }
     
-    if (options && options.checkNew)
-      Base.requestXML(buildWork, base._new_url(), {asynchronous: false});
+    if (options && options.checkNew && this._format == "xml")
+      Base.requestAndParse(this._format, buildWork, base._new_url(), {asynchronous: false});
     
     // set attributes without clearing existing ones, so any attributes specified are simply overrides
     base.setAttributes(attributes)
