@@ -97,7 +97,7 @@ function setUp () {
   // mock out the Internet
   Internet = {}
   
-  // initiate models
+  // Remote models
   Base.model("User", {prefix: "http://www.thoughtbot.com", format: "json"})
   Base.model("Post", {prefix: "http://www.thoughtbot.com", format: "json"})
   
@@ -105,7 +105,7 @@ function setUp () {
   Internet[Post._singular_url(1)] = "jesterCallback(" + postJSON + ");";
   Internet[User._plural_url()] = "jesterCallback(" + usersJSON + ");";
   
-  // initiate models
+  // JSON models
   Base.model("User", {format: "json"})
   Base.model("Post", {format: "json"})
   
@@ -113,7 +113,12 @@ function setUp () {
   Internet[Post._singular_url(1)] = postJSON;
   Internet[User._plural_url()] = usersJSON;
   
-  // initiate models
+  // Path prefixed models
+  Base.model("Post", {prefix: "/users/:user_id"})
+  
+  Internet[Post._singular_url(1, {user_id: 1})] = {'post': postDetails1};
+  
+  // XML models
   Base.model("User")
   Base.model("Post")
   
@@ -220,6 +225,12 @@ function testFind () {
   // test that I can use options form but force it to be synchronous anyway
   var eric = User.find(1, {}, {asynchronous: false});
   assertEquals('eric', eric.first_name);
+  
+  // test path prefixed find
+  Base.model("Post", {prefix: "/users/:user_id"})
+  var post = Post.find(1, {user_id: 1})
+  assertEquals(1, post.id)
+  assertEquals("the body", post.body)
   
   // test JSON find
   Base.model("User", {format: "json"})

@@ -563,27 +563,36 @@ Object.extend(Base.prototype, {
       params = id;
       id = null;
     }
-    if (params) params = $H(params);
-      
     if (id || this.id)
-      return this._prefix + "/" + this._plural + "/" + (id || this.id) + "." + this._format + (params && params.any() ? "?" + params.toQueryString() : "");
+      return this._url(this._plural + "/" + (id || this.id) + "." + this._format, params)
     else
       return "";
   },
   
   _plural_url : function(params) {
-    params = $H(params);
-    return this._prefix + "/" + this._plural + "." + this._format + (params && params.any() ? "?" + params.toQueryString() : "");
+    return this._url(this._plural + "." + this._format, params);
   },
   
   _new_url : function(params) {
-    params = $H(params);
-    return this._prefix + "/" + this._plural + "/new." + this._format + (params && params.any() ? "?" + params.toQueryString() : "");
+    return this._url(this._plural + "/new." + this._format, params);
   },
   
-  // coming soon
-  _custom_url : function() {
-  
+  _url : function(end, params) {
+    params = $H(params);
+    
+    var prefix = this._prefix;
+    var options = prefix.match(/\:[^\/]+/g);
+    if (options) {
+      options.each(function(option) {
+        option = option.substring(1, option.length);
+        if (params[option]) {
+          prefix = prefix.sub(":" + option, params[option]);
+          params.remove(option);
+        }
+      });
+    }
+    
+    return prefix + "/" + end + (params && params.any() ? "?" + params.toQueryString() : "")
   }
 
 });
