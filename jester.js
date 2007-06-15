@@ -65,7 +65,9 @@ Base.requestAndParse = function(format, callback, url, options, user_callback) {
   parse_and_callback = null;
   if (format.toLowerCase() == "json") {
     parse_and_callback = function(transport) {
-      eval("var attributes = " + transport.responseText); // hashes need this kind of eval
+      var attributes = {};
+      if (transport && transport.responseText)
+        eval("attributes = " + transport.responseText); // hashes need this kind of eval
       return callback(attributes);
     }
   }
