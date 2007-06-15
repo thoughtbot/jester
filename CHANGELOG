@@ -1,3 +1,24 @@
+Version 1.4
+
+
+  * Support for Twitter-style JSON callbacks, allowing read-only remote site support for sites which offer this.  This method does not use Prototype or AJAX, but inserts a <script> tag.  Thus, find() calls *must* be made asynchronously, and *only* submitting a function as a callback argument (instead of a Prototype options hash).  Example:
+      
+      User.find(1, {}, function(user) { ... })
+   
+    Objects returned can be modified, but save(), destroy(), create(), and updateAttributes() will all return false.
+    
+  * Basic path prefixes are supported, using ActiveResource syntax to denote prefix options.  Values for these options can be mixed in with the parameters hash argument of a find() call.  For example, to find all posts by the User with ID 1, at /users/1/posts.xml:
+    
+      Base.model("Post", {prefix: "/users/:user_id"})
+      
+      // request to /users/1/posts.xml
+      posts = Post.find("all", {user_id: 1})
+      
+      // request to /users/1/posts.xml?key=value
+      posts = Post.find("all", {user_id: 1, key: value})
+
+
+
 ========================
 Version 1.3 (June 10th)
 ========================

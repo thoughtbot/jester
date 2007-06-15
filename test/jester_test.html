@@ -669,7 +669,7 @@ function testLocationUrls () {
   var eric = User.build({id: 1})
   
   assertEquals('http://www.thoughtbot.com/users/1.xml', eric._singular_url());
-  assertEquals('http://www.thoughtbot.com/users/2.xml', eric._singular_url(2));
+  assertEquals('http://www.thoughtbot.com/users/2.xml', User._singular_url(2));
   
   assertEquals('http://www.thoughtbot.com/users.xml', User._plural_url());
  
@@ -681,6 +681,16 @@ function testLocationUrls () {
   
   assertEquals('http://www.thoughtbot.com/users/new.xml', User._new_url());
   assertEquals('http://www.thoughtbot.com/users/new.xml?lite=true', User._new_url({lite: true}));
+  
+  Base.model('Post', {prefix: 'http://www.thoughtbot.com/users/:user_id'});
+  var post = Post.build({id: 1})
+  
+  assertEquals('http://www.thoughtbot.com/users/1/posts/1.xml', post._singular_url({user_id: 1}));
+  assertEquals('http://www.thoughtbot.com/users/1/posts/2.xml', Post._singular_url(2, {user_id: 1}));
+  assertEquals('http://www.thoughtbot.com/users/2/posts.xml', post._plural_url({user_id: 2}));
+  assertEquals('http://www.thoughtbot.com/users/1/posts.xml?lite=true', post._plural_url({user_id: 1, lite: true}));
+  assertEquals('http://www.thoughtbot.com/users/:user_id/posts.xml', post._plural_url());
+  assertEquals('http://www.thoughtbot.com/users/:user_id/posts.xml', post._plural_url({}));
 }
 
 function testNewRecordCheck () {
