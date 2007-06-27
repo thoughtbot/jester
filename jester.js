@@ -249,7 +249,8 @@ Object.extend(Base.prototype, {
           }
           else {
             var doc = Base._tree.parseXML(transport.responseText);
-            attributes = this._attributesFromTree(doc[this._singular]);
+            if (doc[this._singular])
+              attributes = this._attributesFromTree(doc[this._singular]);
           }
           if (attributes)
             this._resetAttributes(attributes);
