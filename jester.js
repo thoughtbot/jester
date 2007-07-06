@@ -12,7 +12,7 @@
 */
 Jester = {}
 Jester.Resource = function(){};
-Jester.Resources = {};
+Jester.Resources = [];
 
 // Doing it this way forces the validation of the syntax but gives flexibility enough to rename the new class.
 Jester.Constructor = function(model){
@@ -92,7 +92,7 @@ Object.extend(Jester.Resource, {
       this.buildAttributes(new_model, options.asynchronous);
     }
 
-    Jester.Resources[model] = new_model
+    Jester.Resources.push(new_model)
     return new_model;
   },
   
