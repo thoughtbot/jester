@@ -1,13 +1,5 @@
-function bind(context, func) {
-  var __method = func, args = $A(func.arguments), object = context;
-
-  return function() {
-    return __method.apply(object, args.concat($A(arguments)));
-  }
-}
-
 /* The standard way of declaring a model is:
-   Jester.Base.model("User")
+   Jester.Resource.model("User")
    This assumes "user" as a singular form, and "users" as a plural.
    Prefix rules: If no prefix given, default to the local domain
      If prefix given, and prefix begins with "http:", take that as the entire prefix,
@@ -19,7 +11,7 @@ function bind(context, func) {
        "/public/forum" => http://www.thoughtbot.com:8080/public/forum
 */
 Jester = {}
-Jester.Base = function(){}
+Jester.Resource = function(){}
 
 // Doing it this way forces the validation of the syntax but gives flexibility enough to rename the new class.
 Jester.Constructor = function(model){
@@ -38,7 +30,7 @@ Jester.Constructor = function(model){
 // universal Jester callback holder for remote JSON loading
 var jesterCallback = null;
 
-Object.extend(Jester.Base, {
+Object.extend(Jester.Resource, {
   model: function(model, options)
   {
     var new_model = null;
@@ -51,8 +43,8 @@ Object.extend(Jester.Base, {
       console.log(e);
       return null;
     }
-    new_model.prototype = new Jester.Base();
-    Object.extend(new_model, Jester.Base);
+    new_model.prototype = new Jester.Resource();
+    Object.extend(new_model, Jester.Resource);
     
     // We delay instantiating XML.ObjTree() so that it can be listed at the end of this file instead of the beginning
     if (!Jester.Tree) {
@@ -160,7 +152,7 @@ Object.extend(Jester.Base, {
       user_callback = function(arg){ return arg; }
     }
 
-    options.onException = options.onException || bind(this, Jester.Base.onAJAXException);
+    options.onException = options.onException || bind(this, Jester.Resource.onAJAXException);
     
     if (options.asynchronous) {
       options.onComplete = function(transport, json) {user_callback(callback(transport), json);}
@@ -365,7 +357,7 @@ Object.extend(Jester.Base, {
             elements[plural][singular] = [elements[plural][singular]];
           
           elements[plural][singular].each( bind(this, function(single) {
-            if (typeof(eval(name)) == "undefined") Jester.Base.model(name, {prefix: this._prefix, singular: singular, plural: plural});
+            if (typeof(eval(name)) == "undefined") Jester.Resource.model(name, {prefix: this._prefix, singular: singular, plural: plural});
             var base = eval(name + ".build(this._attributesFromTree(single))");
             value.push(base);
           }));
@@ -375,7 +367,7 @@ Object.extend(Jester.Base, {
           singular = attr;
           var name = singular.capitalize();
           
-          if (typeof(eval(name)) == "undefined") Jester.Base.model(name, {prefix: this._prefix, singular: singular});
+          if (typeof(eval(name)) == "undefined") Jester.Resource.model(name, {prefix: this._prefix, singular: singular});
           value = eval(name + ".build(this._attributesFromTree(value))");
         }
       }
@@ -407,7 +399,7 @@ Object.extend(Jester.Base, {
     }
     else {
       // if only one result, wrap it in an array
-      if (!Jester.Base.elementHasMany(doc[this._plural]))
+      if (!Jester.Resource.elementHasMany(doc[this._plural]))
         doc[this._plural][this._singular] = [doc[this._plural][this._singular]];
       
       collection = doc[this._plural][this._singular].map( bind(this, function(elem) {
@@ -419,7 +411,7 @@ Object.extend(Jester.Base, {
   
 });
 
-Object.extend(Jester.Base.prototype, {
+Object.extend(Jester.Resource.prototype, {
   initialize : function(attributes) {
     // Initialize no attributes, no associations
     this._properties = [];
@@ -594,7 +586,7 @@ Object.extend(Jester.Base.prototype, {
     }
     else {
       // if only one result, wrap it in an array
-      if (!Jester.Base.elementHasMany(doc[this._plural]))
+      if (!Jester.Resource.elementHasMany(doc[this._plural]))
         doc[this._plural][this._singular] = [doc[this._plural][this._singular]];
       
       collection = doc[this._plural][this._singular].map( bind(this, function(elem) {
@@ -741,7 +733,7 @@ Object.extend(Jester.Base.prototype, {
 // Returns true if the element has more objects beneath it, or just 1 or more attributes.
 // It's not perfect, this would mess up if an object had only one attribute, and it was an array.
 // For now, this is just one of the difficulties of dealing with ObjTree.
-Jester.Base.elementHasMany = function(element) {
+Jester.Resource.elementHasMany = function(element) {
   var i = 0;
   var singular = null;
   var has_many = false;
@@ -753,6 +745,13 @@ Jester.Base.elementHasMany = function(element) {
   
   return (element[singular] && typeof(element[singular]) == "object" && element[singular].length != null && i == 1);
 }
+
+// If there is no object already called Resource, we define one to make things a little cleaner for us.
+if(typeof(Resource) == "undefined")
+{
+  Resource = Jester.Resource
+}
+
 
 /* 
   Inflector library, contributed graciously to Jester by Ryan Schuft.
@@ -799,6 +798,18 @@ if (!String.prototype.pluralize) String.prototype.pluralize = function(plural) {
   }
   return str;
 };
+
+// This bind function is a modification of the standard Prototype bind function.
+// Use this instead of Prototype's when running in XULRunner due to a longstanding
+// bug in the javascript interpreter.
+
+function bind(context, func) {
+  var __method = func, args = $A(func.arguments), object = context;
+
+  return function() {
+    return __method.apply(object, args.concat($A(arguments)));
+  }
+}
 
 /*
 
