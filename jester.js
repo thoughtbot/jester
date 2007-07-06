@@ -56,13 +56,15 @@ Object.extend(Jester.Resource, {
     var default_prefix = "http://" + window.location.hostname + (window.location.port ? ":" + window.location.port : "");
     var default_options = {
       format:   "xml",
-      singular: model.toLowerCase(),
+      singular: model.underscore(),
       name:     model,
       prefix:   default_prefix
     }
-    options = Object.extend(default_options, options);
-    options.format = options.format.toLowerCase();
-    options.plural = options.singular.pluralize(options.plural);
+    options              = Object.extend(default_options, options);
+    options.format       = options.format.toLowerCase();
+    options.plural       = options.singular.pluralize(options.plural);
+    options.singular_xml = options.singular.replace(/_/g, "-");
+    options.plural_xml   = options.plural.replace(/_/g, "-");
 
     // Establish prefix
     if (!options.prefix.match(/^https?:/)) {
@@ -88,12 +90,15 @@ Object.extend(Jester.Resource, {
     {
       var buildWork = bind(new_model, function(doc) {
         try{
-        this._attributes = this._attributesFromTree(doc[this._singular]);}
+        this._attributes = this._attributesFromTree(doc[this._singular_xml]);}
         catch(e)
         {console.log(this._singular);}
         
       });
-      new_model.requestAndParse("xml", buildWork, new_model._new_url(), {asynchronous: options.asynchronous || false, onException: bind(this, this.onAJAXException)});
+      new_model.requestAndParse("xml", buildWork, new_model._new_url(), {
+        asynchronous: options.asynchronous || false,
+        onException: bind(this, this.onAJAXException)
+      });
     }
 
     return new_model;
@@ -113,7 +118,6 @@ Object.extend(Jester.Resource, {
   },
 
   requestAndParse : function(format, callback, url, options, user_callback, remote) {
-    console.log("RAP: " + remote + " " + format + " " + user_callback)
     if (remote && format == "json" && user_callback) {
       return this.loadRemoteJSON(url, callback, user_callback)
     }
@@ -350,7 +354,7 @@ Object.extend(Jester.Resource, {
         if (relation[singular] && typeof(relation[singular]) == "object" && i == 1) {
           var value = [];
           var plural = attr;
-          var name = singular.capitalize();
+          var name = singular.camelize().capitalize();
           
           // force array
           if (!(elements[plural][singular].length > 0))
@@ -385,7 +389,7 @@ Object.extend(Jester.Resource, {
     if (this._format == "json")
       attributes = this._attributesFromJSON(doc);
     else
-      attributes = this._attributesFromTree(doc[this._singular]);
+      attributes = this._attributesFromTree(doc[this._singular_xml]);
     
     return this.build(attributes);
   },
@@ -399,10 +403,10 @@ Object.extend(Jester.Resource, {
     }
     else {
       // if only one result, wrap it in an array
-      if (!Jester.Resource.elementHasMany(doc[this._plural]))
-        doc[this._plural][this._singular] = [doc[this._plural][this._singular]];
+      if (!Jester.Resource.elementHasMany(doc[this._plural_xml]))
+        doc[this._plural_xml][this._singular_xml] = [doc[this._plural_xml][this._singular_xml]];
       
-      collection = doc[this._plural][this._singular].map( bind(this, function(elem) {
+      collection = doc[this._plural_xml][this._singular_xml].map( bind(this, function(elem) {
         return this.build(this._attributesFromTree(elem));
       }));
     }
@@ -486,8 +490,8 @@ Object.extend(Jester.Resource.prototype, {
           }
           else {
             var doc = Jester.Tree.parseXML(transport.responseText);
-            if (doc[this.class._singular])
-              attributes = this._attributesFromTree(doc[this.class._singular]);
+            if (doc[this.class._singular_xml])
+              attributes = this._attributesFromTree(doc[this.class._singular_xml]);
           }
           if (attributes)
             this._resetAttributes(attributes);
@@ -572,7 +576,7 @@ Object.extend(Jester.Resource.prototype, {
     if (this._format == "json")
       attributes = this._attributesFromJSON(doc);
     else
-      attributes = this._attributesFromTree(doc[this._singular]);
+      attributes = this._attributesFromTree(doc[this._singular_xml]);
     
     return this.build(attributes);
   },
@@ -586,10 +590,10 @@ Object.extend(Jester.Resource.prototype, {
     }
     else {
       // if only one result, wrap it in an array
-      if (!Jester.Resource.elementHasMany(doc[this._plural]))
-        doc[this._plural][this._singular] = [doc[this._plural][this._singular]];
+      if (!Jester.Resource.elementHasMany(doc[this._plural_xml]))
+        doc[this._plural_xml][this._singular_xml] = [doc[this._plural_xml][this._singular_xml]];
       
-      collection = doc[this._plural][this._singular].map( bind(this, function(elem) {
+      collection = doc[this._plural_xml][this._singular_xml].map( bind(this, function(elem) {
         return this.build(this._attributesFromTree(elem));
       }));
     }
@@ -751,7 +755,6 @@ if(typeof(Resource) == "undefined")
 {
   Resource = Jester.Resource
 }
-
 
 /* 
   Inflector library, contributed graciously to Jester by Ryan Schuft.

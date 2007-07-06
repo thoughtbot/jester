@@ -17,6 +17,7 @@ function setUp () {
   default_prefix = function() {return "http://" + window.location.hostname + (window.location.port ? ":" + window.location.port : "");}
   
   ericXML = '<?xml version="1.0" encoding="UTF-8"?><user><created-at type="datetime">2007-04-08T15:12:06-04:00</created-at><id type="integer">1</id><first-name>eric</first-name><admin type="boolean">true</admin></user>'
+  camelCaseXML = '<?xml version="1.0" encoding="UTF-8"?><cool-thing><created-at type="datetime">2007-04-08T15:12:06-04:00</created-at><id type="integer">1</id><first-name>eric</first-name><admin type="boolean">true</admin></cool-thing>'
   ericJSON = '{attributes: {id: "1", first_name: "eric", admin: "1", created_at: "2007-04-08 15:12:06"}}'
   johnJSON = '{attributes: {id: "2", first_name: "john", admin: "0", created_at: "2007-04-09 15:12:06"}}'
   postJSON = '{attributes: {id: "1", title: "the title", body: "the body"}}'
@@ -637,6 +638,14 @@ function testNameAccessors () {
 	assertEquals('user', User._singular);
 	assertEquals('users', User._plural);
 	assertEquals(default_prefix(), User._prefix);
+	
+	Jester.Resource.model("OrderLineItem");
+  assertEquals('OrderLineItem', OrderLineItem._name);
+	assertEquals('order_line_item', OrderLineItem._singular);
+	assertEquals('order_line_items', OrderLineItem._plural);
+	assertEquals('order-line-item', OrderLineItem._singular_xml);
+	assertEquals('order-line-items', OrderLineItem._plural_xml);
+	assertEquals(default_prefix(), OrderLineItem._prefix);
 }
       
 function testPrefix () {
