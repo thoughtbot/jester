@@ -1,5 +1,13 @@
+function bind(context, func) {
+  var __method = func, args = $A(func.arguments), object = context;
+
+  return function() {
+    return __method.apply(object, args.concat($A(arguments)));
+  }
+}
+
 /* The standard way of declaring a model is:
-   Base.model("User")
+   Jester.Base.model("User")
    This assumes "user" as a singular form, and "users" as a plural.
    Prefix rules: If no prefix given, default to the local domain
      If prefix given, and prefix begins with "http:", take that as the entire prefix,
@@ -10,205 +18,217 @@
        "public/forum" => http://www.thoughtbot.com:8080/public/forum
        "/public/forum" => http://www.thoughtbot.com:8080/public/forum
 */
-function Base(name, options) {
-  if (!options) options = {};
+Jester = {}
+Jester.Base = function(){}
 
-  this._name = name;
-  
-  if (options.format)
-    this._format = options.format.toLowerCase();
-  else
-    this._format = "xml";
-    
-  // We delay instantiating XML.ObjTree() so that it can be listed at the end of this file instead of the beginning,
-  // and so it doesn't have to exist at all unless the format is XML
-  if (!Base._tree && this._format == "xml") {
-    Base._tree = new XML.ObjTree();
-    Base._tree.attr_prefix = "@";
-  }
-  
-  if (options.singular)
-    this._singular = options.singular;
-  else
-    this._singular = name.toLowerCase();
-  
-  this._plural = this._singular.pluralize(options.plural);
-  
-  // Establish prefix
-  var default_prefix = function() {return "http://" + window.location.hostname + (window.location.port ? ":" + window.location.port : "");}
-  if (options.prefix) {
-    if (!options.prefix.match(/^http:/))
-       this._prefix = default_prefix() + (options.prefix.match(/^\//) ? "" : "/") + options.prefix
-    else {
-      this._prefix = options.prefix;
-      this._remote = true;
+// Doing it this way forces the validation of the syntax but gives flexibility enough to rename the new class.
+Jester.Constructor = function(model){
+  return (function CONSTRUCTOR()
+  {
+    try {
+      this.class = CONSTRUCTOR;
+      this.initialize.apply(this, arguments);
+      this.after_initialization.apply(this, arguments);
+    } catch(e) {
+      console.log(e)
     }
-  }
-  else
-    this._prefix = default_prefix();
-  
-  // Initialize no attributes, no associations
-  this._properties = [];
-  this._associations = [];
-  
-  // Initialize with no errors
-  this.errors = [];
+  }).toSource().replace(/CONSTRUCTOR/g, model);
 }
 
 // universal Jester callback holder for remote JSON loading
-var jesterCallback;
+var jesterCallback = null;
 
-// Model declaration helper
-Base.model = function(name, options) {eval(name + " = new Base(name, options);")}
-
-Base.loadRemoteJSON = function(url, callback, user_callback) {
-  // tack on user_callback if there is one, and only if it's really a function
-  if (typeof(user_callback) == "function")
-    jesterCallback = function(doc) {user_callback(callback(doc));}
-  else
-    jesterCallback = callback;
-  
-  var script = document.createElement("script");
-  script.type = "text/javascript";
-  script.src = url + "?callback=jesterCallback";
-  document.firstChild.appendChild(script);
-}
-
-// does a request that expects XML, and parses it on return before passing it back
-Base.requestAndParse = function(format, callback, url, options, user_callback, remote) {
-  if (remote && format == "json")
-    return Base.loadRemoteJSON(url, callback, user_callback)
+Object.extend(Jester.Base, {
+  model: function(model, options)
+  {
+    var new_model = null;
+    try
+    {
+      new_model = eval(model + " = " + Jester.Constructor(model));
+    }
+    catch(e)
+    {
+      console.log(e);
+      return null;
+    }
+    new_model.prototype = new Jester.Base();
+    Object.extend(new_model, Jester.Base);
     
-  parse_and_callback = null;
-  if (format.toLowerCase() == "json") {
-    parse_and_callback = function(transport) {
-      var attributes = {};
-      if (transport && transport.responseText)
-        eval("attributes = " + transport.responseText); // hashes need this kind of eval
-      return callback(attributes);
+    // We delay instantiating XML.ObjTree() so that it can be listed at the end of this file instead of the beginning
+    if (!Jester.Tree) {
+      Jester.Tree = new XML.ObjTree();
+      Jester.Tree.attr_prefix = "@";
     }
-  }
-  else {
-    parse_and_callback = function(transport) {return callback(Base._tree.parseXML(transport.responseText));}
-  }
-  
-  // most parse requests are going to be a GET
-  if (!(options.postBody || options.parameters || options.postbody || options.method == "post"))
-    options.method = "get";
-  
-  return Base.request(parse_and_callback, url, options, user_callback);
-}
+    if (!options) options = {};
 
-// Helper to aid in handling either async or synchronous requests
-Base.request = function(callback, url, options, user_callback) {
-  if (user_callback) {
-    options.asynchronous = true;
-    // if an options hash was given instead of a callback
-    if (typeof(user_callback) == "object") {
-      for (var x in user_callback)
-        options[x] = user_callback[x];
-      user_callback = options.onComplete;
+    var default_prefix = "http://" + window.location.hostname + (window.location.port ? ":" + window.location.port : "");
+    var default_options = {
+      format:   "xml",
+      singular: model.toLowerCase(),
+      name:     model,
+      prefix:   default_prefix
     }
-  }
-  else options.asynchronous = false;
+    options = Object.extend(default_options, options);
+    options.format = options.format.toLowerCase();
+    options.plural = options.singular.pluralize(options.plural);
+
+    // Establish prefix
+    if (!options.prefix.match(/^https?:/)) {
+      options.prefix = default_prefix + (options.prefix.match(/^\//) ? "" : "/") + options.prefix;
+    }
+    options.prefix = options.prefix.replace(/\b\/+$/,"");
+    var m = null
+    options.remote = false;
+    if(m = options.prefix.match(/(https?:)\/\/([\w\.]+)(?::(\d+))?/))
+    {
+      options.remote = !(m[1] == window.location.protocol && m[2] == window.location.hostname &&
+                       ((typeof(m[3]) == "undefined" && window.location.port == "")
+                          || m[3] == window.location.port));
+    }
+
+    new_model.name = model;
+    new_model.options = options;
+    for(var opt in options) {
+      new_model["_" + opt] = options[opt];
+    }
+    
+    if(options.checkNew)
+    {
+      var buildWork = bind(new_model, function(doc) {
+        try{
+        this._attributes = this._attributesFromTree(doc[this._singular]);}
+        catch(e)
+        {console.log(this._singular);}
+        
+      });
+      new_model.requestAndParse("xml", buildWork, new_model._new_url(), {asynchronous: options.asynchronous || false, onException: bind(this, this.onAJAXException)});
+    }
+
+    return new_model;
+  },
   
-  if (options.asynchronous) {
-    if (user_callback)
-      options.onComplete = function(transport, json) {user_callback(callback(transport), json);}
+  loadRemoteJSON : function(url, callback, user_callback) {
+    // tack on user_callback if there is one, and only if it's really a function
+    if (typeof(user_callback) == "function")
+      jesterCallback = function(doc) {user_callback(callback(doc));}
     else
-      options.onComplete = function(transport) {callback(transport);}
-    return new Ajax.Request(url, options).transport;
-  }
-  else
-    return callback(new Ajax.Request(url, options).transport);
-}
+      jesterCallback = callback;
 
-Object.extend(Base.prototype, {
-  new_record : function() {return !(this.id);},
-  valid : function() {return ! this.errors.any();},
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src = url + "?callback=jesterCallback";
+    document.firstChild.appendChild(script);
+  },
+
+  requestAndParse : function(format, callback, url, options, user_callback, remote) {
+    console.log("RAP: " + remote + " " + format + " " + user_callback)
+    if (remote && format == "json" && user_callback) {
+      return this.loadRemoteJSON(url, callback, user_callback)
+    }
+    
+    parse_and_callback = null;
+    if (format.toLowerCase() == "json") {
+      parse_and_callback = function(transport) {
+        eval("var attributes = " + transport.responseText); // hashes need this kind of eval
+        return callback(attributes);
+      }
+    } else {
+      parse_and_callback = function(transport) {return callback(Jester.Tree.parseXML(transport.responseText));}
+    }
+
+    // most parse requests are going to be a GET
+    if (!(options.postBody || options.parameters || options.postbody || options.method == "post")) {
+      options.method = "get";
+    }
+
+    return this.request(parse_and_callback, url, options, user_callback);
+  },
+
+  // Helper to aid in handling either async or synchronous requests
+  request : function(callback, url, options, user_callback) {
+    if (user_callback) {
+      options.asynchronous = true;
+      // if an options hash was given instead of a callback
+      if (typeof(user_callback) == "object") {
+        for (var x in user_callback)
+        options[x] = user_callback[x];
+        user_callback = options.onComplete;
+      }
+    }
+    else
+    {
+      user_callback = function(arg){ return arg; }
+    }
+
+    options.onException = options.onException || bind(this, Jester.Base.onAJAXException);
+    
+    if (options.asynchronous) {
+      options.onComplete = function(transport, json) {user_callback(callback(transport), json);}
+      return new Ajax.Request(url, options).transport;
+    }
+    else
+    {
+      options.asynchronous = false; // Make sure it's set, to avoid being overridden.
+      return callback(new Ajax.Request(url, options).transport);
+    }
+  },
   
+  onAJAXException: function(request, exception)
+  {
+    if(console && console.log){ console.log(exception) };
+  },
+
   find : function(id, params, callback) {
-    var findAllWork = function(doc) {
+    var findAllWork = bind(this, function(doc) {
       var collection = this._loadCollection(doc);
-      
+
       // This is better than requiring the controller to support a "limit" parameter
       if (id == "first")
-        return collection[0];
-        
+      return collection[0];
+
       return collection;
-    }.bind(this);
-    
-    var findOneWork = function(doc) {
+    });
+
+    var findOneWork = bind(this, function(doc) {
       var base = this._loadSingle(doc);
-      
+
       // even if the ID didn't come back, we obviously knew the ID to search with, so set it
       if (!base._properties.include("id")) base._setAttribute("id", parseInt(id))
-      
+
       return base;
-    }.bind(this);
-    
+    });
+
     if (id == "first" || id == "all") {
       var url = this._plural_url(params);
-      return Base.requestAndParse(this._format, findAllWork, url, {}, callback, this._remote);
+      return this.requestAndParse(this._format, findAllWork, url, {}, callback, this._remote);
     }
     else {
       if (isNaN(parseInt(id))) return null;
       var url = this._singular_url(id, params);
-      return Base.requestAndParse(this._format, findOneWork, url, {}, callback, this._remote);
+      return this.requestAndParse(this._format, findOneWork, url, {}, callback, this._remote);
     }
   },
   
-  reload : function(callback) {
-    var reloadWork = function(copy) {
-      this._resetAttributes(copy.attributes(true));
-  
-      if (callback)
-        return callback(this);
-      else
-        return this;
-    }.bind(this);
-    
-    if (this.id) {
-      if (callback)
-        return this.find(this.id, {}, reloadWork);
-      else
-        return reloadWork(this.find(this.id));
-    }
-    else
-      return this;
-  },
-  
-  // This function would be named "new", if JavaScript in IE allowed that.
-  build : function(attributes, options) {
-    var base = new Base(this._name, {singular: this._singular, prefix: this._prefix, plural: this._plural, format: this._format});
-    
-    var buildWork = function(doc) {
-      base._resetAttributes(base._attributesFromTree(doc[base._singular]));
-    }
-    
-    if (options && options.checkNew && this._format == "xml")
-      Base.requestAndParse(this._format, buildWork, base._new_url(), {asynchronous: false});
-    
-    // set attributes without clearing existing ones, so any attributes specified are simply overrides
-    base.setAttributes(attributes)
-      
-    return base;
+  build : function(attributes) {
+    return new this(attributes)
   },
   
   create : function(attributes, callback) {
-    var base = this.build(attributes);
+    var base = new this(attributes);
     
-    createWork = function(saved) {
-      if (callback)
-        return callback(base);
-      else
-        return base;
-    }.bind(this);
+    createWork = bind(this, function(saved) {
+      return callback(base);
+    });
     
     if (callback)
+    {
       return base.save(createWork);
+    }
     else
-      return createWork(base.save());
+    {
+      base.save();
+      return base;
+    }
   },
   
   // If not given an ID, destroys itself, if it has an ID.  If given an ID, destroys that record.
@@ -221,7 +241,7 @@ Object.extend(Base.prototype, {
     var id = given_id || this.id;
     if (!id) return false;
     
-    var destroyWork = function(transport) {
+    var destroyWork = bind(this, function(transport) {
       if (transport.status == 200) {
         if (!given_id || this.id == given_id)
           this.id = null;
@@ -229,130 +249,44 @@ Object.extend(Base.prototype, {
       }
       else
         return false;
-    }.bind(this);
+    });
     
-    return Base.request(destroyWork, this._singular_url(id), {method: "delete"}, callback);
+    return this.request(destroyWork, this._singular_url(id), {method: "delete"}, callback);
   },
   
-  save : function(callback) {
-    var saveWork = function(transport) {
-      var saved = false;
-
-      if (transport.responseText) {
-        var errors = this._errorsFrom(transport.responseText);
-        if (errors)
-          this._setErrors(errors);
-        else {
-          var attributes;
-          if (this._format == "json") {
-            attributes = this._attributesFromJSON(transport.responseText);
-          }
-          else {
-            var doc = Base._tree.parseXML(transport.responseText);
-            if (doc[this._singular])
-              attributes = this._attributesFromTree(doc[this._singular]);
-          }
-          if (attributes)
-            this._resetAttributes(attributes);
-        }
-      }
-
-
-      // Get ID from the location header if it's there
-      if (this.new_record() && transport.status == 201) {
-        loc = transport.getResponseHeader("location");
-        if (loc) {
-          id = parseInt(loc.match(/\/([^\/]*?)(\.\w+)?$/)[1]);
-          if (!isNaN(id))
-            this._setProperty("id", id)
-        }
-      }
-
-      return (transport.status >= 200 && transport.status < 300 && this.errors.length == 0);
-    }.bind(this);
-  
-    // reset errors
-    this._setErrors([]);
-  
-    var url = null;
-    var method = null;
-    
-    // distinguish between create and update
-    if (this.new_record()) {
-      url = this._plural_url();
-      method = "post";
-    }
-    else {
-      url = this._singular_url();
-      method = "put";
-    }
-    
-    // collect params
-    var params = {};
-    (this._properties).each(function(value, i) {
-      params[this._singular + "[" + value + "]"] = this[value];
-    }.bind(this));
-    
-    // send the request
-    return Base.request(saveWork, url, {parameters: params, method: method}, callback);
-  },
-  
-  setAttributes : function(attributes)
+  _interpolate: function(string, params)
   {
-    $H(attributes).each(function(attr){ this._setAttribute(attr.key, attr.value) }.bind(this));
-    return attributes;
-  },
-  
-  updateAttributes : function(attributes, callback)
-  {
-    this.setAttributes(attributes);
-    return this.save(callback);
-  },
-  
-  // mimics ActiveRecord's behavior of omitting associations, but keeping foreign keys
-  attributes : function(include_associations) {
-    var attributes = {}
-    for (var i=0; i<this._properties.length; i++)
-      attributes[this._properties[i]] = this[this._properties[i]];
-    if (include_associations) {
-      for (var i=0; i<this._associations.length; i++)
-        attributes[this._associations[i]] = this[this._associations[i]];
+    var result = string;
+    for(var val in params) {
+      var re = new RegExp(":" + val, "g");
+      if(result.match(re))
+      {
+        result = result.replace(re, params[val]);
+        delete params[val];
+      }
     }
-    return attributes;
+    return result;
   },
-    
   
-  /*
-    Internal methods.
-  */
-  
-  _loadSingle : function(doc) {
-    var attributes;
-    if (this._format == "json")
-      attributes = this._attributesFromJSON(doc);
+  _singular_url : function(id, params) {
+    if (params) params = $H(params);
+    var prefix = this._interpolate(this._prefix, params);
+    if (id)
+      return prefix + "/" + this._plural + "/" + id + "." + this._format + (params && params.any() ? "?" + params.toQueryString() : "");
     else
-      attributes = this._attributesFromTree(doc[this._singular]);
-    
-    return this.build(attributes);
+      return "";
   },
   
-  _loadCollection : function(doc) {
-    var collection;
-    if (this._format == "json") {
-      collection = doc.map(function(item) {
-        return this.build(this._attributesFromJSON(item));
-      }.bind(this));
-    }
-    else {
-      // if only one result, wrap it in an array
-      if (!Base.elementHasMany(doc[this._plural]))
-        doc[this._plural][this._singular] = [doc[this._plural][this._singular]];
-      
-      collection = doc[this._plural][this._singular].map(function(elem) {
-        return this.build(this._attributesFromTree(elem));
-      }.bind(this));
-    }
-    return collection;
+  _plural_url : function(params) {
+    params = $H(params);
+    var prefix = this._interpolate(this._prefix, params);
+    return prefix + "/" + this._plural + "." + this._format + (params && params.any() ? "?" + params.toQueryString() : "");
+  },
+  
+  _new_url : function(params) {
+    params = $H(params);
+    var prefix = this._interpolate(this._prefix, params);
+    return prefix + "/" + this._plural + "/new." + this._format + (params && params.any() ? "?" + params.toQueryString() : "");
   },
   
   // Converts a JSON hash returns from ActiveRecord::Base#to_json into a hash of attribute values
@@ -366,7 +300,7 @@ Object.extend(Base.prototype, {
       var value = json.attributes[attr];
       if (attr == "id")
         value = parseInt(value);
-      else if (attr.match(/^.+(_at|_on)$/)) {
+      else if (attr.match(/(created_at|created_on|updated_at|updated_on)/)) {
         var date = Date.parse(value);
         if (date && !isNaN(date)) value = date;
       }
@@ -430,19 +364,19 @@ Object.extend(Base.prototype, {
           if (!(elements[plural][singular].length > 0))
             elements[plural][singular] = [elements[plural][singular]];
           
-          elements[plural][singular].each(function(single) {
-            if (typeof(eval(name)) == "undefined") Base.model(name, {prefix: this._prefix, singular: singular, plural: plural});
-            var base = eval(name + ".build(this._attributesFromTree(single), {checkNew: false})");
+          elements[plural][singular].each( bind(this, function(single) {
+            if (typeof(eval(name)) == "undefined") Jester.Base.model(name, {prefix: this._prefix, singular: singular, plural: plural});
+            var base = eval(name + ".build(this._attributesFromTree(single))");
             value.push(base);
-          }.bind(this));
+          }));
         }
         // has_one or belongs_to
         else {
           singular = attr;
           var name = singular.capitalize();
           
-          if (typeof(eval(name)) == "undefined") Base.model(name, {prefix: this._prefix, singular: singular});
-          value = eval(name + ".build(this._attributesFromTree(value), name, this._prefix, singular)");
+          if (typeof(eval(name)) == "undefined") Jester.Base.model(name, {prefix: this._prefix, singular: singular});
+          value = eval(name + ".build(this._attributesFromTree(value))");
         }
       }
       
@@ -452,6 +386,232 @@ Object.extend(Base.prototype, {
     }
     
     return attributes;
+  },
+  
+  _loadSingle : function(doc) {
+    var attributes;
+    if (this._format == "json")
+      attributes = this._attributesFromJSON(doc);
+    else
+      attributes = this._attributesFromTree(doc[this._singular]);
+    
+    return this.build(attributes);
+  },
+  
+  _loadCollection : function(doc) {
+    var collection;
+    if (this._format == "json") {
+      collection = doc.map( bind(this, function(item) {
+        return this.build(this._attributesFromJSON(item));
+      }));
+    }
+    else {
+      // if only one result, wrap it in an array
+      if (!Jester.Base.elementHasMany(doc[this._plural]))
+        doc[this._plural][this._singular] = [doc[this._plural][this._singular]];
+      
+      collection = doc[this._plural][this._singular].map( bind(this, function(elem) {
+        return this.build(this._attributesFromTree(elem));
+      }));
+    }
+    return collection;
+  }
+  
+});
+
+Object.extend(Jester.Base.prototype, {
+  initialize : function(attributes) {
+    // Initialize no attributes, no associations
+    this._properties = [];
+    this._associations = [];
+    
+    this.setAttributes(this.class._attributes || {});
+    this.setAttributes(attributes);
+
+    // Initialize with no errors
+    this.errors = [];
+  },
+  after_initialization: function(){},
+  
+  new_record : function() {return !(this.id);},
+  valid : function() {return ! this.errors.any();},
+  
+  reload : function(callback) {
+    var reloadWork = bind(this, function(copy) {
+      this._resetAttributes(copy.attributes(true));
+  
+      if (callback)
+        return callback(this);
+      else
+        return this;
+    });
+    
+    if (this.id) {
+      if (callback)
+        return this.class.find(this.id, {}, reloadWork);
+      else
+        return reloadWork(this.class.find(this.id));
+    }
+    else
+      return this;
+  },
+  
+  // If not given an ID, destroys itself, if it has an ID.  If given an ID, destroys that record.
+  // You can call destroy(), destroy(1), destroy(callback()), or destroy(1, callback()), and it works as you expect.
+  destroy : function(given_id, callback) {
+    if (typeof(given_id) == "function") {
+      callback = given_id;
+      given_id = null;
+    }
+    var id = given_id || this.id;
+    if (!id) return false;
+    
+    var destroyWork = bind(this, function(transport) {
+      if (transport.status == 200) {
+        if (!given_id || this.id == given_id)
+          this.id = null;
+        return this;
+      }
+      else
+        return false;
+    });
+    
+    return this.class.request(destroyWork, this._singular_url(id), {method: "delete", onException: bind(this, this._onAJAXException)}, callback);
+  },
+  
+  save : function(callback) {
+    var saveWork = bind(this, function(transport) {
+      var saved = false;
+
+      if (transport.responseText) {
+        var errors = this._errorsFrom(transport.responseText);
+        if (errors)
+          this._setErrors(errors);
+        else {
+          var attributes;
+          if (this._format == "json") {
+            attributes = this._attributesFromJSON(transport.responseText);
+          }
+          else {
+            var doc = Jester.Tree.parseXML(transport.responseText);
+            if (doc[this.class._singular])
+              attributes = this._attributesFromTree(doc[this.class._singular]);
+          }
+          if (attributes)
+            this._resetAttributes(attributes);
+        }
+      }
+
+      // Get ID from the location header if it's there
+      if (this.new_record() && transport.status == 201) {
+        loc = transport.getResponseHeader("location");
+        if (loc) {
+          id = parseInt(loc.match(/\/([^\/]*?)(\.\w+)?$/)[1]);
+          if (!isNaN(id))
+            this._setProperty("id", id)
+        }
+      }
+
+      return (transport.status >= 200 && transport.status < 300 && this.errors.length == 0);
+    });
+  
+    // reset errors
+    this._setErrors([]);
+  
+    var url = null;
+    var method = null;
+    
+    // distinguish between create and update
+    if (this.new_record()) {
+      url = this._plural_url();
+      method = "post";
+    }
+    else {
+      url = this._singular_url();
+      method = "put";
+    }
+    
+    // collect params
+    var params = {};
+    (this._properties).each( bind(this, function(value, i) {
+      params[this.class._singular + "[" + value + "]"] = this[value];
+    }));
+    
+    // send the request
+    return this.class.request(saveWork, url, {parameters: params, method: method, onException: bind(this, this._onAJAXException)}, callback);
+  },
+  
+  setAttributes : function(attributes)
+  {
+    $H(attributes).each(bind(this, function(attr){ this._setAttribute(attr.key, attr.value) }));
+    return attributes;
+  },
+  
+  updateAttributes : function(attributes, callback)
+  {
+    this.setAttributes(attributes);
+    return this.save(callback);
+  },
+  
+  // mimics ActiveRecord's behavior of omitting associations, but keeping foreign keys
+  attributes : function(include_associations) {
+    var attributes = {}
+    for (var i=0; i<this._properties.length; i++)
+      attributes[this._properties[i]] = this[this._properties[i]];
+    if (include_associations) {
+      for (var i=0; i<this._associations.length; i++)
+        attributes[this._associations[i]] = this[this._associations[i]];
+    }
+    return attributes;
+  },
+    
+  /*
+    Internal methods.
+  */
+  
+  _onAJAXException: function(request, exception)
+  {
+    if(console && console.log){ console.log(exception) };
+    this.errors.push(exception.toString());
+  },
+  
+  _loadSingle : function(doc) {
+    var attributes;
+    if (this._format == "json")
+      attributes = this._attributesFromJSON(doc);
+    else
+      attributes = this._attributesFromTree(doc[this._singular]);
+    
+    return this.build(attributes);
+  },
+  
+  _loadCollection : function(doc) {
+    var collection;
+    if (this._format == "json") {
+      collection = doc.map( bind(this, function(item) {
+        return this.build(this._attributesFromJSON(item));
+      }));
+    }
+    else {
+      // if only one result, wrap it in an array
+      if (!Jester.Base.elementHasMany(doc[this._plural]))
+        doc[this._plural][this._singular] = [doc[this._plural][this._singular]];
+      
+      collection = doc[this._plural][this._singular].map( bind(this, function(elem) {
+        return this.build(this._attributesFromTree(elem));
+      }));
+    }
+    return collection;
+  },
+  
+  _attributesFromJSON: function()
+  {
+    return this.class._attributesFromJSON.apply(this.class, arguments);
+  },
+  
+  _attributesFromTree: function()
+  {
+    return this.class._attributesFromTree.apply(this.class, arguments);
   },
   
   _errorsFrom : function(raw) {
@@ -480,7 +640,7 @@ Object.extend(Base.prototype, {
   // Pulls errors from XML
   _errorsFromXML : function(xml) {
     if (!xml) return false;
-    var doc = Base._tree.parseXML(xml);
+    var doc = Jester.Tree.parseXML(xml);
 
     if (doc.errors) {
       var errors = [];
@@ -559,41 +719,21 @@ Object.extend(Base.prototype, {
   },
   
   // helper URLs
-  _singular_url : function(id, params) {
-    if (typeof(id) == "object" && !params) {
-      params = id;
-      id = null;
-    }
-    if (id || this.id)
-      return this._url(this._plural + "/" + (id || this.id) + "." + this._format, params)
-    else
-      return "";
+  _singular_url : function(params) {
+    return this.class._singular_url(this.id, params)
   },
   
   _plural_url : function(params) {
-    return this._url(this._plural + "." + this._format, params);
+    return this.class._plural_url(params)
   },
   
   _new_url : function(params) {
-    return this._url(this._plural + "/new." + this._format, params);
+    return this.class._new_url(params)
   },
   
-  _url : function(end, params) {
-    params = $H(params);
-    
-    var prefix = this._prefix;
-    var options = prefix.match(/\:[^\/]+/g);
-    if (options) {
-      options.each(function(option) {
-        option = option.substring(1, option.length);
-        if (params[option]) {
-          prefix = prefix.sub(":" + option, params[option]);
-          params.remove(option);
-        }
-      });
-    }
-    
-    return prefix + "/" + end + (params && params.any() ? "?" + params.toQueryString() : "")
+  // coming soon
+  _custom_url : function() {
+  
   }
 
 });
@@ -601,7 +741,7 @@ Object.extend(Base.prototype, {
 // Returns true if the element has more objects beneath it, or just 1 or more attributes.
 // It's not perfect, this would mess up if an object had only one attribute, and it was an array.
 // For now, this is just one of the difficulties of dealing with ObjTree.
-Base.elementHasMany = function(element) {
+Jester.Base.elementHasMany = function(element) {
   var i = 0;
   var singular = null;
   var has_many = false;

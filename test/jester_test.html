@@ -7,7 +7,7 @@
     <title>jester.js</title>
     <script language="JavaScript" type="text/javascript" src="jsunit/app/jsUnitCore.js"></script>
     <script language="JavaScript" type="text/javascript" src="../prototype.jester.js"></script>
-    <script language="JavaScript" type="text/javascript" src="../jester.js"></script>
+    <script language="JavaScript" type="text/javascript" src="../jester_n2.js"></script>
   </head>
 
   <body>
@@ -98,29 +98,29 @@ function setUp () {
   Internet = {}
   
   // Remote models
-  Base.model("User", {prefix: "http://www.thoughtbot.com", format: "json"})
-  Base.model("Post", {prefix: "http://www.thoughtbot.com", format: "json"})
+  Jester.Base.model("User", {prefix: "http://www.thoughtbot.com", format: "json"})
+  Jester.Base.model("Post", {prefix: "http://www.thoughtbot.com", format: "json"})
   
   Internet[User._singular_url(1)] = "jesterCallback(" + ericJSON + ");";
   Internet[Post._singular_url(1)] = "jesterCallback(" + postJSON + ");";
   Internet[User._plural_url()] = "jesterCallback(" + usersJSON + ");";
   
   // JSON models
-  Base.model("User", {format: "json"})
-  Base.model("Post", {format: "json"})
+  Jester.Base.model("User", {format: "json"})
+  Jester.Base.model("Post", {format: "json"})
   
   Internet[User._singular_url(1)] = ericJSON;
   Internet[Post._singular_url(1)] = postJSON;
   Internet[User._plural_url()] = usersJSON;
   
   // Path prefixed models
-  Base.model("Post", {prefix: "/users/:user_id"})
+  Jester.Base.model("Post", {prefix: "/users/:user_id"})
   
   Internet[Post._singular_url(1, {user_id: 1})] = {'post': postDetails1};
   
   // XML models
-  Base.model("User")
-  Base.model("Post")
+  Jester.Base.model("User")
+  Jester.Base.model("Post")
   
   Internet[User._singular_url(1)] = {'user': ericDetails};
   Internet[User._singular_url(2)] = {'user': johnDetails};
@@ -140,7 +140,7 @@ function setUp () {
   changed = false;
   assert_changed = function() {assert(changed); changed = false;}
   
-  Base.requestAndParse = function (format, callback, url, options, user_callback, remote) {
+  Jester.Base.requestAndParse = function (format, callback, url, options, user_callback, remote) {
     if (remote && format == "json") {
       jesterCallback = function(json){
         result = callback(json);
@@ -156,8 +156,10 @@ function setUp () {
     
     if (format == "json")
       eval('result = ' + result);
+      
     if (callback)
       result = callback(result);
+      
     if (user_callback) {
       changed = true;
       if (typeof(user_callback) == "function")
@@ -181,9 +183,9 @@ function setUp () {
 function testFind () {
 	var eric = User.find(1);
 	
-	assertEquals('User', eric._name)
-	assertEquals('user', eric._singular);
-	assertEquals('users', eric._plural);
+	assertEquals('User', eric.class.name)
+	assertEquals('user', eric.class._singular);
+	assertEquals('users', eric.class._plural);
 	
 	assertEquals("Attributes should be filled in correctly on find().", 'eric', eric.first_name);
 	assert("Boolean attributes should be auto-transformed (when format is XML).", eric.admin);
@@ -227,20 +229,20 @@ function testFind () {
   assertEquals('eric', eric.first_name);
   
   // test path prefixed find
-  Base.model("Post", {prefix: "/users/:user_id"})
+  Jester.Base.model("Post", {prefix: "/users/:user_id"})
   var post = Post.find(1, {user_id: 1})
   assertEquals(1, post.id)
   assertEquals("the body", post.body)
   
   // test JSON find
-  Base.model("User", {format: "json"})
+  Jester.Base.model("User", {format: "json"})
   var eric = User.find(1);
   assertEquals("Eric wasn't found through JSON find(1).", 'eric', eric.first_name);
   assertEquals("ID didn't get transformed using JSON.", 1, eric.id);
   assertEquals("1", eric.admin.toString());
   
   // test Remote find
-  Base.model("User", {prefix: "http://www.thoughtbot.com", format: "json"})
+  Jester.Base.model("User", {prefix: "http://www.thoughtbot.com", format: "json"})
   var eric;
   User.find(1, {}, function(eric) {
     assertEquals("Eric wasn't found through remote find(1).", 'eric', eric.first_name);
@@ -279,7 +281,7 @@ function testFindAll () {
   assertEquals("chad", admins[1].first_name);
   
   // JSON find all
-  Base.model("User", {format: "json"})
+  Jester.Base.model("User", {format: "json"})
   var users = User.find('all');
   assertEquals("Found eric as first user in JSON :all", "eric", users[0].first_name)
   assertEquals("Found john as second user in JSON :all", "john", users[1].first_name)
@@ -289,8 +291,8 @@ function testFindAll () {
   User.find('all', {}, function(users) {
     assert_changed();
     assertEquals(2, users.length);
-    assertEquals("Found eric as first user in JSON :all", "eric", users[0].first_name)
-    assertEquals("Found john as second user in JSON :all", "john", users[1].first_name)
+    assertEquals("Found eric as first user in remote JSON :all", "eric", users[0].first_name)
+    assertEquals("Found john as second user in remote JSON :all", "john", users[1].first_name)
   });
 }
 
@@ -342,15 +344,15 @@ function testRelations () {
   var john = User.find(2);
   assertEquals(1, john.posts.length);
   
-  assertEquals("has_many object should have correct name.", "Post", eric.posts[0]._name);
-  assertEquals("has_many object should have correct singular form.", "post", eric.posts[0]._singular);
-  assertEquals("has_many object should have correct plural form.", "posts", eric.posts[1]._plural);
+  assertEquals("has_many object should have correct name.", "Post", eric.posts[0].class.name);
+  assertEquals("has_many object should have correct singular form.", "post", eric.posts[0].class._singular);
+  assertEquals("has_many object should have correct plural form.", "posts", eric.posts[1].class._plural);
   
   Internet[Post._singular_url(1)] = {'post': postIncludeDetails};
   var post = Post.find(1);
-  assertEquals("has_one object should have correct name.", "User", post.user._name);
-  assertEquals("has_one object should have correct singular form.", "user", post.user._singular);
-  assertEquals("has_one object should have correct plural form.", "users", post.user._plural);
+  assertEquals("has_one object should have correct name.", "User", post.user.class.name);
+  assertEquals("has_one object should have correct singular form.", "user", post.user.class._singular);
+  assertEquals("has_one object should have correct plural form.", "users", post.user.class._plural);
 }
 
 
@@ -506,16 +508,16 @@ function testSaveReloadsUponFullResponse () {
 function testBuild () {
   // test without checking new.xml
   var eric = User.build();
-  assertEquals(Base, eric.constructor);
+  assertEquals(User, eric.class);
   assertEquals(0, eric._properties.length);
 
   // test with checking new.xml
-  Base.model('User');
-  var eric = User.build({}, {checkNew: true});
+  Jester.Base.model('User', {checkNew: true});
+  var eric = User.build();
   assertEquals(3, eric._properties.length);
   
   // test that specific attributes will override what new returns
-  var eric = User.build({first_name: "eric", admin: true, daisies: 5}, {checkNew: true});
+  var eric = User.build({first_name: "eric", admin: true, daisies: 5});
   assertEquals(4, eric._properties.length);
   assertEquals("eric", eric.first_name);
   assertEquals(true, eric.admin);
@@ -579,28 +581,30 @@ function testAttributesFromTree() {
 
 function testErrorsFromJSON() {
   var errorJSON = '[["name", "can\'t be blank"], ["city", "can\'t be blank"]]';
-  var errors = User._errorsFromJSON(errorJSON);
+	var eric = new User();
+  var errors = eric._errorsFromJSON(errorJSON);
   
   assertEquals(2, errors.length);
   assertEquals("Name can't be blank", errors[0]);
 	assertEquals("City can't be blank", errors[1]);
 	
-  assertEquals(false, User._errorsFromJSON(' '));
-  assertEquals(false, User._errorsFromJSON(''));
-  assertEquals(false, User._errorsFromJSON(null));
+  assertEquals(false, eric._errorsFromJSON(' '));
+  assertEquals(false, eric._errorsFromJSON(''));
+  assertEquals(false, eric._errorsFromJSON(null));
 }
 
 function testErrorsFromXML() {
 	var errorXML = "<errors><error>Name can't be blank</error><error>City can't be blank</error></errors>"
-	var errors = User._errorsFromXML(errorXML);
+	var eric = new User();
+	var errors = eric._errorsFromXML(errorXML);
 	
 	assertEquals(2, errors.length);
 	assertEquals("Name can't be blank", errors[0]);
 	assertEquals("City can't be blank", errors[1]);
 	
-	assertEquals(false, User._errorsFromXML(' '));
-  assertEquals(false, User._errorsFromXML(''));
-  assertEquals(false, User._errorsFromXML(null));
+	assertEquals(false, eric._errorsFromXML(' '));
+  assertEquals(false, eric._errorsFromXML(''));
+  assertEquals(false, eric._errorsFromXML(null));
 }
 
 /********************************************
@@ -633,39 +637,38 @@ function testNameAccessors () {
 	assertEquals('user', User._singular);
 	assertEquals('users', User._plural);
 	assertEquals(default_prefix(), User._prefix);
-	assert(User.errors.length == 0);
 }
       
 function testPrefix () {
-  Base.model('User', {prefix: 'http://www.thoughtbot.com'});
+  Jester.Base.model('User', {prefix: 'http://www.thoughtbot.com'});
   assertEquals('http://www.thoughtbot.com', User._prefix);
 
-  Base.model('User', {prefix: 'public/forum'});
+  Jester.Base.model('User', {prefix: 'public/forum'});
   assertEquals(default_prefix() + '/public/forum', User._prefix);
 
-  Base.model('User', {prefix: '/public/forum'});
+  Jester.Base.model('User', {prefix: '/public/forum'});
   assertEquals(default_prefix() + '/public/forum', User._prefix);
 }
 
 function testPluralization () {
   // base case
-  Base.model('Person');
+  Jester.Base.model('Person');
   assertEquals('person', Person._singular);
   assertEquals('people', Person._plural);
   
   // singular override
-  Base.model('Person', {singular: 'user'})
+  Jester.Base.model('Person', {singular: 'user'})
   assertEquals('user', Person._singular);
   assertEquals('users', Person._plural);
 
   // plural override
-  Base.model('Person', {plural: 'persons'});
+  Jester.Base.model('Person', {plural: 'persons'});
   assertEquals('person', Person._singular);
   assertEquals('persons', Person._plural);
 }
 
 function testLocationUrls () {
-  Base.model('User', {prefix: 'http://www.thoughtbot.com'});
+  Jester.Base.model('User', {prefix: 'http://www.thoughtbot.com'});
   var eric = User.build({id: 1})
   
   assertEquals('http://www.thoughtbot.com/users/1.xml', eric._singular_url());
@@ -675,14 +678,14 @@ function testLocationUrls () {
  
   assertEquals('http://www.thoughtbot.com/users.xml?admin=true&name=eric&lasers=5', User._plural_url({admin: true, name: "eric", lasers: 5}));
   assertEquals('http://www.thoughtbot.com/users/1.xml?lite=true', eric._singular_url({lite: true}))
-  assertEquals('http://www.thoughtbot.com/users/1.xml?lite=true', eric._singular_url(1, {lite: true}))
+  assertNotEquals('http://www.thoughtbot.com/users/1.xml?lite=true', eric._singular_url(1, {lite: true}))
   assertEquals('http://www.thoughtbot.com/users.xml', User._plural_url({}));
-  assertEquals('http://www.thoughtbot.com/users/2.xml', eric._singular_url(2, {}));
+  assertNotEquals('http://www.thoughtbot.com/users/2.xml', eric._singular_url(2, {}));
   
   assertEquals('http://www.thoughtbot.com/users/new.xml', User._new_url());
   assertEquals('http://www.thoughtbot.com/users/new.xml?lite=true', User._new_url({lite: true}));
   
-  Base.model('Post', {prefix: 'http://www.thoughtbot.com/users/:user_id'});
+  Jester.Base.model('Post', {prefix: 'http://www.thoughtbot.com/users/:user_id'});
   var post = Post.build({id: 1})
   
   assertEquals('http://www.thoughtbot.com/users/1/posts/1.xml', post._singular_url({user_id: 1}));
@@ -703,7 +706,8 @@ function testNewRecordCheck () {
 
 function testSetErrors () {
   var errors = ["Name can't be blank", "City can't be blank"]
-	var eric = new Base('User');
+  Jester.Base.model('User');
+	var eric = new User();
   assert(eric.valid());
 
 	eric._setErrors(errors);
