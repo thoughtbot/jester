@@ -11,7 +11,8 @@
        "/public/forum" => http://www.thoughtbot.com:8080/public/forum
 */
 Jester = {}
-Jester.Resource = function(){}
+Jester.Resource = function(){};
+Jester.Resources = {};
 
 // Doing it this way forces the validation of the syntax but gives flexibility enough to rename the new class.
 Jester.Constructor = function(model){
@@ -88,20 +89,25 @@ Object.extend(Jester.Resource, {
     
     if(options.checkNew)
     {
-      var buildWork = bind(new_model, function(doc) {
-        try{
-        this._attributes = this._attributesFromTree(doc[this._singular_xml]);}
-        catch(e)
-        {console.log(this._singular);}
-        
-      });
-      new_model.requestAndParse("xml", buildWork, new_model._new_url(), {
-        asynchronous: options.asynchronous || false,
-        onException: bind(this, this.onAJAXException)
-      });
+      this.buildAttributes(new_model, options.asynchronous);
     }
 
+    Jester.Resources[model] = new_model
     return new_model;
+  },
+  
+  buildAttributes: function(model, async)
+  {
+    model = model || this;
+    async = async || false;
+    
+    var buildWork = bind(model, function(doc) {
+      this._attributes = this._attributesFromTree(doc[this._singular_xml]);
+    });
+    model.requestAndParse("xml", buildWork, model._new_url(), {
+      asynchronous: async,
+      onException: bind(this, this.onAJAXException)
+    });
   },
   
   loadRemoteJSON : function(url, callback, user_callback) {
