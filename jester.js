@@ -12,7 +12,6 @@
 */
 Jester = {}
 Jester.Resource = function(){};
-Jester.Resources = [];
 
 // Doing it this way forces the validation of the syntax but gives flexibility enough to rename the new class.
 Jester.Constructor = function(model){
@@ -41,34 +40,32 @@ Object.extend(Jester.Resource, {
     }
     if (!options) options = {};
 
-    var default_prefix = "http://" + window.location.hostname + (window.location.port ? ":" + window.location.port : "")
     var default_options = {
       format:   "xml",
       singular: model.underscore(),
       name:     model,
-      prefix: default_prefix
     }
     options              = Object.extend(default_options, options);
     options.format       = options.format.toLowerCase();
     options.plural       = options.singular.pluralize(options.plural);
     options.singular_xml = options.singular.replace(/_/g, "-");
     options.plural_xml   = options.plural.replace(/_/g, "-");
-    options.remote = false;
+    options.remote       = false;
     
     // Establish prefix
-    if (!options.prefix.match(/^https?:/)) {
-      options.prefix = default_prefix + (options.prefix.match(/^\//) ? "" : "/") + options.prefix;
-    }
-    options.prefix = options.prefix.replace(/\b\/+$/,"");
+    var default_prefix = "http://" + window.location.hostname + (window.location.port ? ":" + window.location.port : "")
+    if (options.prefix && options.prefix.match(/^https?:/))
+      options.remote = true;
+      
+    if (!options.prefix)
+      options.prefix = default_prefix;
     
-    var m = null;
-    if(m = options.prefix.match(/(https?:)\/\/([\w\.]+)(?::(\d+))?/))
-    {
-      options.remote = !(m[1] == window.location.protocol && m[2] == window.location.hostname &&
-                       ((typeof(m[3]) == "undefined" && window.location.port == "")
-                          || m[3] == window.location.port));
-    }
+    if (!options.prefix.match(/^https?:/))
+      options.prefix = default_prefix + (options.prefix.match(/^\//) ? "" : "/") + options.prefix;
+            
+    options.prefix = options.prefix.replace(/\b\/+$/,"");
 
+    // Assign options to model
     new_model.name = model;
     new_model.options = options;
     for(var opt in options)
@@ -77,7 +74,6 @@ Object.extend(Jester.Resource, {
     if(options.checkNew)
       this.buildAttributes(new_model, options.asynchronous);
 
-    Jester.Resources.push(new_model)
     return new_model;
   },
   

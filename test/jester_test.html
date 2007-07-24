@@ -150,7 +150,8 @@ function setUp () {
           user_callback(result);
         }
       }
-      return eval(Internet[url]);
+      eval('var result = ' + Internet[url]);
+      return result;
     }
   
     var result = Internet[url];
