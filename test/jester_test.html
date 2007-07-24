@@ -181,12 +181,8 @@ function setUp () {
  ************ FIND TESTS ********************
  ********************************************/
 
-function testFind () {
+function testFind() {
 	var eric = User.find(1);
-	
-	assertEquals('User', eric.class.name)
-	assertEquals('user', eric.class._singular);
-	assertEquals('users', eric.class._plural);
 	
 	assertEquals("Attributes should be filled in correctly on find().", 'eric', eric.first_name);
 	assert("Boolean attributes should be auto-transformed (when format is XML).", eric.admin);
@@ -252,7 +248,7 @@ function testFind () {
   });
 }
 
-function testFindAll () {  
+function testFindAll() {  
   var users = User.find('all');
   assertEquals(3, users.length);
   
@@ -297,7 +293,7 @@ function testFindAll () {
   });
 }
 
-function testFindFirst () {
+function testFindFirst() {
   var eric = User.find('first');
   var eric2 = User.find(1);
   
@@ -316,7 +312,7 @@ function testFindFirst () {
 }
 
 // reload is a find operation
-function testReload () {
+function testReload() {
   var eric = User.find(1)
   
   // fake that the user details got updated
@@ -338,7 +334,7 @@ function testReload () {
  ************ ASSOCIATION TESTS *************
  ********************************************/
  
-function testRelations () {
+function testRelations() {
   var eric = User.find(1);
   assertEquals(2, eric.posts.length);
   
@@ -361,7 +357,7 @@ function testRelations () {
  ************ VALIDATION TESTS **************
  ********************************************/
 
-function testValidCheck () {
+function testValidCheck() {
   var user = User.build();
   
   assert(user.valid());
@@ -369,7 +365,7 @@ function testValidCheck () {
   assert(! user.valid());
 }
 
-function testInvalidSave () {
+function testInvalidSave() {
   var user = User.build();
   user._setProperties({ 'first_name' : '' });
   assert(user.new_record());
@@ -409,13 +405,13 @@ function testInvalidSave () {
  ************ CRUD TESTS ********************
  ********************************************/
 
-function testDestroy () {
+function testDestroy() {
   var eric = User.build({id: 1})
 	Ajax = { Request : function (url, options) { 
 	    this.transport = { status : 500 };
 	  }
 	}
-	assert(! eric.destroy());
+	assert(!eric.destroy());
 	assertEquals(1, eric.id);
   
   var eric = User.build({id: 1})
@@ -434,7 +430,7 @@ function testDestroy () {
   });	
 }
 
-function testSaveNewRecord () {
+function testSaveNewRecord() {
   var eric = User.build({ 'first_name' : 'eric' });
   assert(eric.new_record());
 
@@ -457,7 +453,7 @@ function testSaveNewRecord () {
   });
 }
 
-function testSaveExistingRecord () {
+function testSaveExistingRecord() {
 	var eric = User.build({ 'id' : '1', 'first_name' : 'eric' });
 	assert(! eric.new_record());
 
@@ -473,7 +469,7 @@ function testSaveExistingRecord () {
   });
 }
 
-function testSaveReloadsUponFullResponse () {
+function testSaveReloadsUponFullResponse() {
   // new record
   var john = User.build({'first_name' : 'john' });
   
@@ -506,7 +502,7 @@ function testSaveReloadsUponFullResponse () {
   assertEquals(1, john.id); // if the server changes the ID, so be it
 }
 
-function testBuild () {
+function testBuild() {
   // test without checking new.xml
   var eric = User.build();
   assertEquals(User, eric.class);
@@ -612,7 +608,7 @@ function testErrorsFromXML() {
  ************ INTERNAL TESTS ****************
  ********************************************/
 
-function testSetProperties () {
+function testSetProperties() {
   var eric = User.build()
 	assertUndefined(eric.first_name);
 
@@ -622,7 +618,7 @@ function testSetProperties () {
 	assertEquals('first_name', eric._properties[0]);
 }
 
-function testSetAssociations () {
+function testSetAssociations() {
   var eric = User.build()
 	assertUndefined(eric.posts);
 	var posts = [Post.find(1)]
@@ -633,7 +629,7 @@ function testSetAssociations () {
 	assertEquals('posts', eric._associations[0]);
 }
 
-function testNameAccessors () {
+function testNameAccessors() {
   assertEquals('User', User._name);
 	assertEquals('user', User._singular);
 	assertEquals('users', User._plural);
@@ -648,18 +644,18 @@ function testNameAccessors () {
 	assertEquals(default_prefix(), OrderLineItem._prefix);
 }
       
-function testPrefix () {
+function testPrefix() {
   Jester.Resource.model('User', {prefix: 'http://www.thoughtbot.com'});
-  assertEquals('http://www.thoughtbot.com', User._prefix);
+  assertEquals("Absolute prefix.", 'http://www.thoughtbot.com', User._prefix);
 
   Jester.Resource.model('User', {prefix: 'public/forum'});
-  assertEquals(default_prefix() + '/public/forum', User._prefix);
+  assertEquals("Path prefix with no slash.", default_prefix() + '/public/forum', User._prefix);
 
   Jester.Resource.model('User', {prefix: '/public/forum'});
-  assertEquals(default_prefix() + '/public/forum', User._prefix);
+  assertEquals( "Path prefix with slash.", default_prefix() + '/public/forum', User._prefix);
 }
 
-function testPluralization () {
+function testPluralization() {
   // base case
   Jester.Resource.model('Person');
   assertEquals('person', Person._singular);
@@ -676,20 +672,19 @@ function testPluralization () {
   assertEquals('persons', Person._plural);
 }
 
-function testLocationUrls () {
+function testLocationUrls() {
   Jester.Resource.model('User', {prefix: 'http://www.thoughtbot.com'});
   var eric = User.build({id: 1})
   
   assertEquals('http://www.thoughtbot.com/users/1.xml', eric._singular_url());
   assertEquals('http://www.thoughtbot.com/users/2.xml', User._singular_url(2));
+  assertEquals('http://www.thoughtbot.com/users/2.xml', User._singular_url(2, {}));
+  assertEquals('http://www.thoughtbot.com/users/1.xml?lite=true', User._singular_url(1, {lite: true}))
+  assertEquals('http://www.thoughtbot.com/users/1.xml?lite=true', eric._singular_url({lite: true}))
   
   assertEquals('http://www.thoughtbot.com/users.xml', User._plural_url());
- 
-  assertEquals('http://www.thoughtbot.com/users.xml?admin=true&name=eric&lasers=5', User._plural_url({admin: true, name: "eric", lasers: 5}));
-  assertEquals('http://www.thoughtbot.com/users/1.xml?lite=true', eric._singular_url({lite: true}))
-  assertNotEquals('http://www.thoughtbot.com/users/1.xml?lite=true', eric._singular_url(1, {lite: true}))
   assertEquals('http://www.thoughtbot.com/users.xml', User._plural_url({}));
-  assertNotEquals('http://www.thoughtbot.com/users/2.xml', eric._singular_url(2, {}));
+  assertEquals('http://www.thoughtbot.com/users.xml?admin=true&name=eric&lasers=5', User._plural_url({admin: true, name: "eric", lasers: 5}));
   
   assertEquals('http://www.thoughtbot.com/users/new.xml', User._new_url());
   assertEquals('http://www.thoughtbot.com/users/new.xml?lite=true', User._new_url({lite: true}));
@@ -705,7 +700,7 @@ function testLocationUrls () {
   assertEquals('http://www.thoughtbot.com/users/:user_id/posts.xml', post._plural_url({}));
 }
 
-function testNewRecordCheck () {
+function testNewRecordCheck() {
   var eric = User.build();
   assert(eric.new_record());
   
@@ -713,7 +708,7 @@ function testNewRecordCheck () {
   assert(! eric.new_record());
 }
 
-function testSetErrors () {
+function testSetErrors() {
   var errors = ["Name can't be blank", "City can't be blank"]
   Jester.Resource.model('User');
 	var eric = new User();

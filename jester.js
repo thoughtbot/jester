@@ -16,15 +16,10 @@ Jester.Resources = [];
 
 // Doing it this way forces the validation of the syntax but gives flexibility enough to rename the new class.
 Jester.Constructor = function(model){
-  return (function CONSTRUCTOR()
-  {
-    try {
-      this.class = CONSTRUCTOR;
-      this.initialize.apply(this, arguments);
-      this.after_initialization.apply(this, arguments);
-    } catch(e) {
-      console.log(e)
-    }
+  return (function CONSTRUCTOR() {
+    this.class = CONSTRUCTOR;
+    this.initialize.apply(this, arguments);
+    this.after_initialization.apply(this, arguments);
   }).toSource().replace(/CONSTRUCTOR/g, model);
 }
 
@@ -35,15 +30,7 @@ Object.extend(Jester.Resource, {
   model: function(model, options)
   {
     var new_model = null;
-    try
-    {
-      new_model = eval(model + " = " + Jester.Constructor(model));
-    }
-    catch(e)
-    {
-      console.log(e);
-      return null;
-    }
+    new_model = eval(model + " = " + Jester.Constructor(model));
     new_model.prototype = new Jester.Resource();
     Object.extend(new_model, Jester.Resource);
     
@@ -54,26 +41,27 @@ Object.extend(Jester.Resource, {
     }
     if (!options) options = {};
 
-    var default_prefix = "http://" + window.location.hostname + (window.location.port ? ":" + window.location.port : "");
+    var default_prefix = "http://" + window.location.hostname + (window.location.port ? ":" + window.location.port : "")
     var default_options = {
       format:   "xml",
       singular: model.underscore(),
       name:     model,
-      prefix:   default_prefix
+      prefix: default_prefix
     }
     options              = Object.extend(default_options, options);
     options.format       = options.format.toLowerCase();
     options.plural       = options.singular.pluralize(options.plural);
     options.singular_xml = options.singular.replace(/_/g, "-");
     options.plural_xml   = options.plural.replace(/_/g, "-");
-
+    options.remote = false;
+    
     // Establish prefix
     if (!options.prefix.match(/^https?:/)) {
       options.prefix = default_prefix + (options.prefix.match(/^\//) ? "" : "/") + options.prefix;
     }
     options.prefix = options.prefix.replace(/\b\/+$/,"");
-    var m = null
-    options.remote = false;
+    
+    var m = null;
     if(m = options.prefix.match(/(https?:)\/\/([\w\.]+)(?::(\d+))?/))
     {
       options.remote = !(m[1] == window.location.protocol && m[2] == window.location.hostname &&
@@ -83,14 +71,11 @@ Object.extend(Jester.Resource, {
 
     new_model.name = model;
     new_model.options = options;
-    for(var opt in options) {
+    for(var opt in options)
       new_model["_" + opt] = options[opt];
-    }
     
     if(options.checkNew)
-    {
       this.buildAttributes(new_model, options.asynchronous);
-    }
 
     Jester.Resources.push(new_model)
     return new_model;
@@ -104,10 +89,7 @@ Object.extend(Jester.Resource, {
     var buildWork = bind(model, function(doc) {
       this._attributes = this._attributesFromTree(doc[this._singular_xml]);
     });
-    model.requestAndParse("xml", buildWork, model._new_url(), {
-      asynchronous: async,
-      onException: bind(this, this.onAJAXException)
-    });
+    model.requestAndParse("xml", buildWork, model._new_url(), {asynchronous: async});
   },
   
   loadRemoteJSON : function(url, callback, user_callback) {
@@ -158,11 +140,7 @@ Object.extend(Jester.Resource, {
       }
     }
     else
-    {
-      user_callback = function(arg){ return arg; }
-    }
-
-    options.onException = options.onException || bind(this, Jester.Resource.onAJAXException);
+      user_callback = function(arg){return arg;}
     
     if (options.asynchronous) {
       options.onComplete = function(transport, json) {user_callback(callback(transport), json);}
@@ -173,11 +151,6 @@ Object.extend(Jester.Resource, {
       options.asynchronous = false; // Make sure it's set, to avoid being overridden.
       return callback(new Ajax.Request(url, options).transport);
     }
-  },
-  
-  onAJAXException: function(request, exception)
-  {
-    if(console && console.log){ console.log(exception) };
   },
 
   find : function(id, params, callback) {
@@ -271,7 +244,8 @@ Object.extend(Jester.Resource, {
   },
   
   _singular_url : function(id, params) {
-    if (params) params = $H(params);
+    if (params && typeof(params) == "object") params = $H(params);
+    
     var prefix = this._interpolate(this._prefix, params);
     if (id)
       return prefix + "/" + this._plural + "/" + id + "." + this._format + (params && params.any() ? "?" + params.toQueryString() : "");
@@ -478,7 +452,7 @@ Object.extend(Jester.Resource.prototype, {
         return false;
     });
     
-    return this.class.request(destroyWork, this._singular_url(id), {method: "delete", onException: bind(this, this._onAJAXException)}, callback);
+    return this.class.request(destroyWork, this._singular_url(), {method: "delete"}, callback);
   },
   
   save : function(callback) {
@@ -540,7 +514,7 @@ Object.extend(Jester.Resource.prototype, {
     }));
     
     // send the request
-    return this.class.request(saveWork, url, {parameters: params, method: method, onException: bind(this, this._onAJAXException)}, callback);
+    return this.class.request(saveWork, url, {parameters: params, method: method}, callback);
   },
   
   setAttributes : function(attributes)
@@ -570,12 +544,6 @@ Object.extend(Jester.Resource.prototype, {
   /*
     Internal methods.
   */
-  
-  _onAJAXException: function(request, exception)
-  {
-    if(console && console.log){ console.log(exception) };
-    this.errors.push(exception.toString());
-  },
   
   _loadSingle : function(doc) {
     var attributes;
@@ -756,11 +724,25 @@ Jester.Resource.elementHasMany = function(element) {
   return (element[singular] && typeof(element[singular]) == "object" && element[singular].length != null && i == 1);
 }
 
+// This bind function is a modification of the standard Prototype bind function.
+// Use this instead of Prototype's when running in XULRunner due to a longstanding
+// bug in the javascript interpreter.
+
+function bind(context, func) {
+  var __method = func, args = $A(func.arguments), object = context;
+
+  return function() {
+    return __method.apply(object, args.concat($A(arguments)));
+  }
+}
+
 // If there is no object already called Resource, we define one to make things a little cleaner for us.
 if(typeof(Resource) == "undefined")
-{
   Resource = Jester.Resource
-}
+
+
+
+
 
 /* 
   Inflector library, contributed graciously to Jester by Ryan Schuft.
@@ -807,18 +789,6 @@ if (!String.prototype.pluralize) String.prototype.pluralize = function(plural) {
   }
   return str;
 };
-
-// This bind function is a modification of the standard Prototype bind function.
-// Use this instead of Prototype's when running in XULRunner due to a longstanding
-// bug in the javascript interpreter.
-
-function bind(context, func) {
-  var __method = func, args = $A(func.arguments), object = context;
-
-  return function() {
-    return __method.apply(object, args.concat($A(arguments)));
-  }
-}
 
 /*
 
