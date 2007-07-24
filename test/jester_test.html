@@ -196,12 +196,16 @@ function testFind() {
 	assertEquals("Eric's second post's title wasn't loaded.", 'another title', eric.posts[1].title);
 	assertEquals("Eric's second post's body wasn't loaded.", 'another body', eric.posts[1].body);
 	
+	// failed find
+  var eric = User.find(50);
+  assert(eric == null);
+	
 	// with params
-  var ericLite = User.find(1, {lite: true})
-  assertEquals("eric", ericLite.first_name)
-  assertEquals(1, ericLite.id) // make sure ID gets autoset
-  assertEquals(2, ericLite._properties.length)
-  assert(typeof(ericLite.admin) == "undefined")
+  var ericLite = User.find(1, {lite: true});
+  assertEquals("eric", ericLite.first_name);
+  assertEquals(1, ericLite.id); // make sure ID gets autoset
+  assertEquals(2, ericLite._properties.length);
+  assert(typeof(ericLite.admin) == "undefined");
 	
 	// test function form of callback
 	User.find(1, {}, function(eric) {

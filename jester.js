@@ -113,11 +113,15 @@ Object.extend(Jester.Resource, {
     parse_and_callback = null;
     if (format.toLowerCase() == "json") {
       parse_and_callback = function(transport) {
+        if (transport.status == 500) return callback(null);
         eval("var attributes = " + transport.responseText); // hashes need this kind of eval
         return callback(attributes);
       }
     } else {
-      parse_and_callback = function(transport) {return callback(Jester.Tree.parseXML(transport.responseText));}
+      parse_and_callback = function(transport) {
+        if (transport.status == 500) return callback(null);
+        return callback(Jester.Tree.parseXML(transport.responseText));
+      }
     }
 
     // most parse requests are going to be a GET
@@ -155,17 +159,25 @@ Object.extend(Jester.Resource, {
 
   find : function(id, params, callback) {
     var findAllWork = bind(this, function(doc) {
+      if (!doc) return null;
+      
       var collection = this._loadCollection(doc);
+      
+      if (!collection) return null;
 
       // This is better than requiring the controller to support a "limit" parameter
       if (id == "first")
-      return collection[0];
+        return collection[0];
 
       return collection;
     });
 
     var findOneWork = bind(this, function(doc) {
+      if (!doc) return null;
+      
       var base = this._loadSingle(doc);
+      
+      if (!base) return null;
 
       // even if the ID didn't come back, we obviously knew the ID to search with, so set it
       if (!base._properties.include("id")) base._setAttribute("id", parseInt(id))
