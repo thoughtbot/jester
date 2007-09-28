@@ -64,12 +64,20 @@ Object.extend(Jester.Resource, {
       options.prefix = default_prefix + (options.prefix.match(/^\//) ? "" : "/") + options.prefix;
             
     options.prefix = options.prefix.replace(/\b\/+$/,"");
+    
+    // Establish custom URLs
+    options.urls = Object.extend(this._default_urls(options), options.urls);
 
     // Assign options to model
     new_model.name = model;
     new_model.options = options;
     for(var opt in options)
       new_model["_" + opt] = options[opt];
+    
+    // Establish custom URL helpers
+    for (var url in options.urls) {
+      eval('new_model._' + url + '_url = function(params) {return this._url_for("' + url + '", params);}');
+    }
     
     if(options.checkNew)
       this.buildAttributes(new_model, options.asynchronous);
@@ -85,7 +93,7 @@ Object.extend(Jester.Resource, {
     var buildWork = bind(model, function(doc) {
       this._attributes = this._attributesFromTree(doc[this._singular_xml]);
     });
-    model.requestAndParse("xml", buildWork, model._new_url(), {asynchronous: async});
+    model.requestAndParse("xml", buildWork, model._url_for("new"), {asynchronous: async});
   },
   
   loadRemoteJSON : function(url, callback, user_callback) {
@@ -97,7 +105,14 @@ Object.extend(Jester.Resource, {
 
     var script = document.createElement("script");
     script.type = "text/javascript";
-    script.src = url + "?callback=jesterCallback";
+    
+    if (url.indexOf("?") == -1)
+      url += "?";
+    else
+      url += "&";
+    url += "callback=jesterCallback";
+    script.src = url
+    
     document.firstChild.appendChild(script);
   },
 
@@ -173,7 +188,8 @@ Object.extend(Jester.Resource, {
       
       var base = this._loadSingle(doc);
       
-      if (!base) return null;
+      // if there were no properties, it was probably not actually loaded
+      if (!base || base._properties.length == 0) return null;
 
       // even if the ID didn't come back, we obviously knew the ID to search with, so set it
       if (!base._properties.include("id")) base._setAttribute("id", parseInt(id))
@@ -182,12 +198,15 @@ Object.extend(Jester.Resource, {
     });
 
     if (id == "first" || id == "all") {
-      var url = this._plural_url(params);
+      var url = this._url_for("list", params);
       return this.requestAndParse(this._format, findAllWork, url, {}, callback, this._remote);
     }
     else {
       if (isNaN(parseInt(id))) return null;
-      var url = this._singular_url(id, params);
+      if (!params) params = {};
+      params.id = id;
+      
+      var url = this._url_for("show", params);
       return this.requestAndParse(this._format, findOneWork, url, {}, callback, this._remote);
     }
   },
@@ -234,7 +253,7 @@ Object.extend(Jester.Resource, {
         return false;
     });
     
-    return this.request(destroyWork, this._singular_url(id), {method: "delete"}, callback);
+    return this.request(destroyWork, this._url_for("destroy", id), {method: "delete"}, callback);
   },
   
   _interpolate: function(string, params)
@@ -251,37 +270,40 @@ Object.extend(Jester.Resource, {
     return result;
   },
   
-  _singular_url : function(id, params) {
-    if (params && typeof(params) == "object") params = $H(params);
+  _url_for : function(action, params) {
+    if (!this._urls[action]) return "";
+    // if an integer is sent, it's assumed just the ID is a parameter
+    if (params && typeof(params) == "number") params = {id: params}
     
-    var prefix = this._interpolate(this._prefix, params);
-    if (id)
-      return prefix + "/" + this._plural + "/" + id + "." + this._format + (params && params.any() ? "?" + params.toQueryString() : "");
-    else
-      return "";
+    if (params) params = $H(params);
+    
+    var url = this._interpolate(this._prefix + this._urls[action], params)
+    return url + (params && params.any() ? "?" + params.toQueryString() : "");
   },
   
-  _plural_url : function(params) {
-    params = $H(params);
-    var prefix = this._interpolate(this._prefix, params);
-    return prefix + "/" + this._plural + "." + this._format + (params && params.any() ? "?" + params.toQueryString() : "");
-  },
-  
-  _new_url : function(params) {
-    params = $H(params);
-    var prefix = this._interpolate(this._prefix, params);
-    return prefix + "/" + this._plural + "/new." + this._format + (params && params.any() ? "?" + params.toQueryString() : "");
+  _default_urls : function(options) {
+    urls = {
+      show : "/" + options.plural + "/:id." + options.format,
+      list : "/" + options.plural + "." + options.format,
+      new : "/" + options.plural + "/new." + options.format
+    }
+    urls.index = urls.create = urls.list;
+    urls.destroy = urls.update = urls.show;
+    
+    return urls;    
   },
   
   // Converts a JSON hash returns from ActiveRecord::Base#to_json into a hash of attribute values
   // Does not handle associations, as AR's #to_json doesn't either
   // Also, JSON doesn't include room to store types, so little auto-transforming is done here (just on 'id')
-  _attributesFromJSON : function(json) {    
-    if (!(json && json.attributes)) return false;
+  _attributesFromJSON : function(json) {
+    if (!json || json.constructor != Object) return false;
+    if (json.attributes) json = json.attributes;
     
-    var attributes = {}
-    for (var attr in json.attributes) {
-      var value = json.attributes[attr];
+    var attributes = {};
+    var i = 0;
+    for (var attr in json) {
+      var value = json[attr];
       if (attr == "id")
         value = parseInt(value);
       else if (attr.match(/(created_at|created_on|updated_at|updated_on)/)) {
@@ -289,7 +311,10 @@ Object.extend(Jester.Resource, {
         if (date && !isNaN(date)) value = date;
       }
       attributes[attr] = value;
+      i += 1;
     }
+    if (i == 0) return false; // empty hashes should just return false
+    
     return attributes;
   },
   
@@ -414,6 +439,10 @@ Object.extend(Jester.Resource.prototype, {
 
     // Initialize with no errors
     this.errors = [];
+    
+    // Establish custom URL helpers
+    for (var url in this.class._urls)
+      eval('this._' + url + '_url = function(params) {return this._url_for("' + url + '", params);}');
   },
   after_initialization: function(){},
   
@@ -460,7 +489,7 @@ Object.extend(Jester.Resource.prototype, {
         return false;
     });
     
-    return this.class.request(destroyWork, this._singular_url(), {method: "delete"}, callback);
+    return this.class.request(destroyWork, this._url_for("destroy"), {method: "delete"}, callback);
   },
   
   save : function(callback) {
@@ -507,11 +536,11 @@ Object.extend(Jester.Resource.prototype, {
     
     // distinguish between create and update
     if (this.new_record()) {
-      url = this._plural_url();
+      url = this._url_for("create");
       method = "post";
     }
     else {
-      url = this._singular_url();
+      url = this._url_for("update");
       method = "put";
     }
     
@@ -552,35 +581,6 @@ Object.extend(Jester.Resource.prototype, {
   /*
     Internal methods.
   */
-  
-  _loadSingle : function(doc) {
-    var attributes;
-    if (this._format == "json")
-      attributes = this._attributesFromJSON(doc);
-    else
-      attributes = this._attributesFromTree(doc[this._singular_xml]);
-    
-    return this.build(attributes);
-  },
-  
-  _loadCollection : function(doc) {
-    var collection;
-    if (this._format == "json") {
-      collection = doc.map( bind(this, function(item) {
-        return this.build(this._attributesFromJSON(item));
-      }));
-    }
-    else {
-      // if only one result, wrap it in an array
-      if (!Jester.Resource.elementHasMany(doc[this._plural_xml]))
-        doc[this._plural_xml][this._singular_xml] = [doc[this._plural_xml][this._singular_xml]];
-      
-      collection = doc[this._plural_xml][this._singular_xml].map( bind(this, function(elem) {
-        return this.build(this._attributesFromTree(elem));
-      }));
-    }
-    return collection;
-  },
   
   _attributesFromJSON: function()
   {
@@ -697,23 +697,14 @@ Object.extend(Jester.Resource.prototype, {
   },
   
   // helper URLs
-  _singular_url : function(params) {
-    return this.class._singular_url(this.id, params)
-  },
-  
-  _plural_url : function(params) {
-    return this.class._plural_url(params)
-  },
-  
-  _new_url : function(params) {
-    return this.class._new_url(params)
-  },
-  
-  // coming soon
-  _custom_url : function() {
-  
+  _url_for : function(action, params) {
+    if (!params) params = this.id;
+    if (typeof(params) == "object" && !params.id)
+      params.id = this.id;
+    
+    return this.class._url_for(action, params);
   }
-
+  
 });
 
 // Returns true if the element has more objects beneath it, or just 1 or more attributes.
@@ -747,8 +738,6 @@ function bind(context, func) {
 // If there is no object already called Resource, we define one to make things a little cleaner for us.
 if(typeof(Resource) == "undefined")
   Resource = Jester.Resource
-
-
 
 
 

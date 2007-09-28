@@ -7,13 +7,13 @@
 /*--------------------------------------------------------------------------*/
 
 
-/************************************************ NOTE ************************************************
+/************************************************ NOTE ***********************
 
-   This is a lightened version of Prototype, containing only what Jester needs to run.  If you plan on
-   using Prototype in your app for anything besides Jester, you should use the full distribution
-   of Prototype, instead of this one.
+   This is a lightened version of Prototype, containing only what Jester needs
+   to run.  If you plan on using Prototype in your app for anything besides 
+   Jester, you should use the full distribution of Prototype instead.
    
-*******************************************************************************************************/
+******************************************************************************
 
 var Prototype = {
   Version: '1.5.0',
