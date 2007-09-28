@@ -93,7 +93,7 @@ Object.extend(Jester.Resource, {
     var buildWork = bind(model, function(doc) {
       this._attributes = this._attributesFromTree(doc[this._singular_xml]);
     });
-    model.requestAndParse("xml", buildWork, model._url_for("new"), {asynchronous: async});
+    model.requestAndParse("xml", buildWork, model._new_url(), {asynchronous: async});
   },
   
   loadRemoteJSON : function(url, callback, user_callback) {
@@ -198,7 +198,7 @@ Object.extend(Jester.Resource, {
     });
 
     if (id == "first" || id == "all") {
-      var url = this._url_for("list", params);
+      var url = this._list_url(params);
       return this.requestAndParse(this._format, findAllWork, url, {}, callback, this._remote);
     }
     else {
@@ -206,7 +206,7 @@ Object.extend(Jester.Resource, {
       if (!params) params = {};
       params.id = id;
       
-      var url = this._url_for("show", params);
+      var url = this._show_url(params);
       return this.requestAndParse(this._format, findOneWork, url, {}, callback, this._remote);
     }
   },
@@ -253,7 +253,7 @@ Object.extend(Jester.Resource, {
         return false;
     });
     
-    return this.request(destroyWork, this._url_for("destroy", id), {method: "delete"}, callback);
+    return this.request(destroyWork, this._destroy_url(id), {method: "delete"}, callback);
   },
   
   _interpolate: function(string, params)
@@ -273,7 +273,7 @@ Object.extend(Jester.Resource, {
   _url_for : function(action, params) {
     if (!this._urls[action]) return "";
     // if an integer is sent, it's assumed just the ID is a parameter
-    if (params && typeof(params) == "number") params = {id: params}
+    if (typeof(params) == "number") params = {id: params}
     
     if (params) params = $H(params);
     
@@ -290,7 +290,7 @@ Object.extend(Jester.Resource, {
     urls.index = urls.create = urls.list;
     urls.destroy = urls.update = urls.show;
     
-    return urls;    
+    return urls;
   },
   
   // Converts a JSON hash returns from ActiveRecord::Base#to_json into a hash of attribute values
@@ -489,7 +489,7 @@ Object.extend(Jester.Resource.prototype, {
         return false;
     });
     
-    return this.class.request(destroyWork, this._url_for("destroy"), {method: "delete"}, callback);
+    return this.class.request(destroyWork, this._destroy_url(), {method: "delete"}, callback);
   },
   
   save : function(callback) {
@@ -536,11 +536,11 @@ Object.extend(Jester.Resource.prototype, {
     
     // distinguish between create and update
     if (this.new_record()) {
-      url = this._url_for("create");
+      url = this._create_url();
       method = "post";
     }
     else {
-      url = this._url_for("update");
+      url = this._update_url();
       method = "put";
     }
     

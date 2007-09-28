@@ -6,8 +6,9 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">  
     <title>jester.js</title>
     <script language="JavaScript" type="text/javascript" src="jsunit/app/jsUnitCore.js"></script>
-    <script language="JavaScript" type="text/javascript" src="../prototype.jester.js"></script>
+    <script language="JavaScript" type="text/javascript" src="../prototype.js"></script>
     <script language="JavaScript" type="text/javascript" src="../jester.js"></script>
+    <script language="JavaScript" type="text/javascript" src="../firebug/firebug.js"></script>
   </head>
 
   <body>
@@ -99,41 +100,41 @@ function setUp () {
   Internet = {}
   
   // Remote models
-  Jester.Resource.model("User", {prefix: "http://www.thoughtbot.com", format: "json"})
-  Jester.Resource.model("Post", {prefix: "http://www.thoughtbot.com", format: "json"})
+  Resource.model("User", {prefix: "http://www.thoughtbot.com", format: "json"})
+  Resource.model("Post", {prefix: "http://www.thoughtbot.com", format: "json"})
   
-  Internet[User._singular_url(1)] = "jesterCallback(" + ericJSON + ");";
-  Internet[Post._singular_url(1)] = "jesterCallback(" + postJSON + ");";
-  Internet[User._plural_url()] = "jesterCallback(" + usersJSON + ");";
+  Internet[User._show_url(1)] = "jesterCallback(" + ericJSON + ");";
+  Internet[Post._show_url(1)] = "jesterCallback(" + postJSON + ");";
+  Internet[User._list_url()] = "jesterCallback(" + usersJSON + ");";
   
   // JSON models
-  Jester.Resource.model("User", {format: "json"})
-  Jester.Resource.model("Post", {format: "json"})
+  Resource.model("User", {format: "json"})
+  Resource.model("Post", {format: "json"})
   
-  Internet[User._singular_url(1)] = ericJSON;
-  Internet[Post._singular_url(1)] = postJSON;
-  Internet[User._plural_url()] = usersJSON;
+  Internet[User._show_url(1)] = ericJSON;
+  Internet[Post._show_url(1)] = postJSON;
+  Internet[User._list_url()] = usersJSON;
   
   // Path prefixed models
-  Jester.Resource.model("Post", {prefix: "/users/:user_id"})
+  Resource.model("Post", {prefix: "/users/:user_id"})
   
-  Internet[Post._singular_url(1, {user_id: 1})] = {'post': postDetails1};
+  Internet[Post._show_url(1, {user_id: 1})] = {'post': postDetails1};
   
   // XML models
-  Jester.Resource.model("User")
-  Jester.Resource.model("Post")
+  Resource.model("User")
+  Resource.model("Post")
   
-  Internet[User._singular_url(1)] = {'user': ericDetails};
-  Internet[User._singular_url(2)] = {'user': johnDetails};
-  Internet[User._singular_url(3)] = {'user': chadDetails};
-  Internet[Post._singular_url(1)] = {'post': postDetails1};
-  Internet[Post._singular_url(2)] = {'post': postDetails2};
-  Internet[Post._singular_url(3)] = {'post': postDetails3};
-  Internet[User._plural_url()] = allUsersDetails;
-  Internet[Post._plural_url()] = allPostsDetails;
-  Internet[User._singular_url(1, {lite: true})] = {'user': {'first-name' : 'eric'}};
-  Internet[User._plural_url({admin: true})] = {'users': {'user': [ericDetails, chadDetails]}};
-  Internet[User._plural_url({admin: false})] = {'users': {'user': johnDetails}};
+  Internet[User._show_url(1)] = {'user': ericDetails};
+  Internet[User._show_url(2)] = {'user': johnDetails};
+  Internet[User._show_url(3)] = {'user': chadDetails};
+  Internet[Post._show_url(1)] = {'post': postDetails1};
+  Internet[Post._show_url(2)] = {'post': postDetails2};
+  Internet[Post._show_url(3)] = {'post': postDetails3};
+  Internet[User._list_url()] = allUsersDetails;
+  Internet[Post._list_url()] = allPostsDetails;
+  Internet[User._show_url({id: 1, lite: true})] = {'user': {'first-name' : 'eric'}};
+  Internet[User._list_url({admin: true})] = {'users': {'user': [ericDetails, chadDetails]}};
+  Internet[User._list_url({admin: false})] = {'users': {'user': johnDetails}};
   Internet[User._new_url()] = {'user' : newUserDetails};
 
 
@@ -141,7 +142,7 @@ function setUp () {
   changed = false;
   assert_changed = function() {assert(changed); changed = false;}
   
-  Jester.Resource.requestAndParse = function (format, callback, url, options, user_callback, remote) {
+  Resource.requestAndParse = function (format, callback, url, options, user_callback, remote) {
     if (remote && format == "json") {
       jesterCallback = function(json){
         result = callback(json);
@@ -231,20 +232,20 @@ function testFind() {
   assertEquals('eric', eric.first_name);
   
   // test path prefixed find
-  Jester.Resource.model("Post", {prefix: "/users/:user_id"})
+  Resource.model("Post", {prefix: "/users/:user_id"})
   var post = Post.find(1, {user_id: 1})
   assertEquals(1, post.id)
   assertEquals("the body", post.body)
   
   // test JSON find
-  Jester.Resource.model("User", {format: "json"})
+  Resource.model("User", {format: "json"})
   var eric = User.find(1);
   assertEquals("Eric wasn't found through JSON find(1).", 'eric', eric.first_name);
   assertEquals("ID didn't get transformed using JSON.", 1, eric.id);
   assertEquals("1", eric.admin.toString());
   
   // test Remote find
-  Jester.Resource.model("User", {prefix: "http://www.thoughtbot.com", format: "json"})
+  Resource.model("User", {prefix: "http://www.thoughtbot.com", format: "json"})
   var eric;
   User.find(1, {}, function(eric) {
     assertEquals("Eric wasn't found through remote find(1).", 'eric', eric.first_name);
@@ -272,7 +273,7 @@ function testFindAll() {
   });
   
   // test that there's no issue with one element arrays in XML
-  Internet[User._plural_url()] = allWithOneUserDetails;
+  Internet[User._list_url()] = allWithOneUserDetails;
   var users = User.find("all");
   assertEquals(1, users.length);
   
@@ -283,7 +284,7 @@ function testFindAll() {
   assertEquals("chad", admins[1].first_name);
   
   // JSON find all
-  Jester.Resource.model("User", {format: "json"})
+  Resource.model("User", {format: "json"})
   var users = User.find('all');
   assertEquals("Found eric as first user in JSON :all", "eric", users[0].first_name)
   assertEquals("Found john as second user in JSON :all", "john", users[1].first_name)
@@ -321,13 +322,13 @@ function testReload() {
   var eric = User.find(1)
   
   // fake that the user details got updated
-  Internet[User._singular_url(1)] = {'user': johnDetails}
+  Internet[User._show_url(1)] = {'user': johnDetails}
   
   eric.reload();
   assertEquals("john", eric.first_name)
   
   // switch back
-  Internet[User._singular_url(2)] = {'user': ericDetails}
+  Internet[User._show_url(2)] = {'user': ericDetails}
   
   eric.reload(function(ignoreMe) {
     assertEquals("eric", eric.first_name)
@@ -350,7 +351,7 @@ function testRelations() {
   assertEquals("has_many object should have correct singular form.", "post", eric.posts[0].class._singular);
   assertEquals("has_many object should have correct plural form.", "posts", eric.posts[1].class._plural);
   
-  Internet[Post._singular_url(1)] = {'post': postIncludeDetails};
+  Internet[Post._show_url(1)] = {'post': postIncludeDetails};
   var post = Post.find(1);
   assertEquals("has_one object should have correct name.", "User", post.user.class.name);
   assertEquals("has_one object should have correct singular form.", "user", post.user.class._singular);
@@ -514,7 +515,7 @@ function testBuild() {
   assertEquals(0, eric._properties.length);
 
   // test with checking new.xml
-  Jester.Resource.model('User', {checkNew: true});
+  Resource.model('User', {checkNew: true});
   var eric = User.build();
   assertEquals(3, eric._properties.length);
   
@@ -568,8 +569,12 @@ function testAttributesFromJSON() {
   assertEquals("eric", attributes.first_name);
   assertEquals(Date, attributes.created_at.constructor)
   
+  // test that the surrounding attributes hash is optional
+  var attributes = User._attributesFromJSON({email: "emill@thoughtbot.com", id: "1"});
+  assertEquals("emill@thoughtbot.com", attributes.email);
+  assertEquals(1, attributes.id);
+  
   assertEquals(false, User._attributesFromJSON({}));
-  assertEquals(false, User._attributesFromJSON({email: "emill@thoughtbot.com", id: "1"}));
   assertEquals(false, User._attributesFromJSON([]));
   assertEquals(false, User._attributesFromJSON(null));
 }
@@ -640,7 +645,7 @@ function testNameAccessors() {
 	assertEquals('users', User._plural);
 	assertEquals(default_prefix(), User._prefix);
 	
-	Jester.Resource.model("OrderLineItem");
+	Resource.model("OrderLineItem");
   assertEquals('OrderLineItem', OrderLineItem._name);
 	assertEquals('order_line_item', OrderLineItem._singular);
 	assertEquals('order_line_items', OrderLineItem._plural);
@@ -650,59 +655,59 @@ function testNameAccessors() {
 }
       
 function testPrefix() {
-  Jester.Resource.model('User', {prefix: 'http://www.thoughtbot.com'});
+  Resource.model('User', {prefix: 'http://www.thoughtbot.com'});
   assertEquals("Absolute prefix.", 'http://www.thoughtbot.com', User._prefix);
 
-  Jester.Resource.model('User', {prefix: 'public/forum'});
+  Resource.model('User', {prefix: 'public/forum'});
   assertEquals("Path prefix with no slash.", default_prefix() + '/public/forum', User._prefix);
 
-  Jester.Resource.model('User', {prefix: '/public/forum'});
+  Resource.model('User', {prefix: '/public/forum'});
   assertEquals( "Path prefix with slash.", default_prefix() + '/public/forum', User._prefix);
 }
 
 function testPluralization() {
   // base case
-  Jester.Resource.model('Person');
+  Resource.model('Person');
   assertEquals('person', Person._singular);
   assertEquals('people', Person._plural);
   
   // singular override
-  Jester.Resource.model('Person', {singular: 'user'})
+  Resource.model('Person', {singular: 'user'})
   assertEquals('user', Person._singular);
   assertEquals('users', Person._plural);
 
   // plural override
-  Jester.Resource.model('Person', {plural: 'persons'});
+  Resource.model('Person', {plural: 'persons'});
   assertEquals('person', Person._singular);
   assertEquals('persons', Person._plural);
 }
 
 function testLocationUrls() {
-  Jester.Resource.model('User', {prefix: 'http://www.thoughtbot.com'});
+  Resource.model('User', {prefix: 'http://www.thoughtbot.com'});
   var eric = User.build({id: 1})
   
-  assertEquals('http://www.thoughtbot.com/users/1.xml', eric._singular_url());
-  assertEquals('http://www.thoughtbot.com/users/2.xml', User._singular_url(2));
-  assertEquals('http://www.thoughtbot.com/users/2.xml', User._singular_url(2, {}));
-  assertEquals('http://www.thoughtbot.com/users/1.xml?lite=true', User._singular_url(1, {lite: true}))
-  assertEquals('http://www.thoughtbot.com/users/1.xml?lite=true', eric._singular_url({lite: true}))
+  assertEquals('http://www.thoughtbot.com/users/1.xml', eric._show_url());
+  assertEquals('http://www.thoughtbot.com/users/2.xml', User._show_url(2));
+  assertEquals('http://www.thoughtbot.com/users/2.xml', User._show_url({id: 2}));
+  assertEquals('http://www.thoughtbot.com/users/1.xml?lite=true', User._show_url({id: 1, lite: true}))
+  assertEquals('http://www.thoughtbot.com/users/1.xml?lite=true', eric._show_url({lite: true}))
   
-  assertEquals('http://www.thoughtbot.com/users.xml', User._plural_url());
-  assertEquals('http://www.thoughtbot.com/users.xml', User._plural_url({}));
-  assertEquals('http://www.thoughtbot.com/users.xml?admin=true&name=eric&lasers=5', User._plural_url({admin: true, name: "eric", lasers: 5}));
+  assertEquals('http://www.thoughtbot.com/users.xml', User._list_url());
+  assertEquals('http://www.thoughtbot.com/users.xml', User._list_url({}));
+  assertEquals('http://www.thoughtbot.com/users.xml?admin=true&name=eric&lasers=5', User._list_url({admin: true, name: "eric", lasers: 5}));
   
   assertEquals('http://www.thoughtbot.com/users/new.xml', User._new_url());
   assertEquals('http://www.thoughtbot.com/users/new.xml?lite=true', User._new_url({lite: true}));
   
-  Jester.Resource.model('Post', {prefix: 'http://www.thoughtbot.com/users/:user_id'});
+  Resource.model('Post', {prefix: 'http://www.thoughtbot.com/users/:user_id'});
   var post = Post.build({id: 1})
   
-  assertEquals('http://www.thoughtbot.com/users/1/posts/1.xml', post._singular_url({user_id: 1}));
-  assertEquals('http://www.thoughtbot.com/users/1/posts/2.xml', Post._singular_url(2, {user_id: 1}));
-  assertEquals('http://www.thoughtbot.com/users/2/posts.xml', post._plural_url({user_id: 2}));
-  assertEquals('http://www.thoughtbot.com/users/1/posts.xml?lite=true', post._plural_url({user_id: 1, lite: true}));
-  assertEquals('http://www.thoughtbot.com/users/:user_id/posts.xml', post._plural_url());
-  assertEquals('http://www.thoughtbot.com/users/:user_id/posts.xml', post._plural_url({}));
+  assertEquals('http://www.thoughtbot.com/users/1/posts/1.xml', post._show_url({user_id: 1}));
+  assertEquals('http://www.thoughtbot.com/users/1/posts/2.xml', Post._show_url({id: 2, user_id: 1}));
+  assertEquals('http://www.thoughtbot.com/users/2/posts.xml', Post._list_url({user_id: 2}));
+  assertEquals('http://www.thoughtbot.com/users/1/posts.xml?lite=true', Post._list_url({user_id: 1, lite: true}));
+  assertEquals('http://www.thoughtbot.com/users/:user_id/posts.xml', Post._list_url());
+  assertEquals('http://www.thoughtbot.com/users/:user_id/posts.xml', Post._list_url({}));
 }
 
 function testNewRecordCheck() {
@@ -715,7 +720,7 @@ function testNewRecordCheck() {
 
 function testSetErrors() {
   var errors = ["Name can't be blank", "City can't be blank"]
-  Jester.Resource.model('User');
+  Resource.model('User');
 	var eric = new User();
   assert(eric.valid());
 
