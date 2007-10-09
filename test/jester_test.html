@@ -93,6 +93,41 @@ function setUp () {
     'created_at' : { '@type' : 'datetime' }
   }
   
+  Resource.requestAndParse = function (format, callback, url, options, user_callback, remote) {
+    if (remote && format == "json") {
+      jesterCallback = function(json){
+        result = callback(json);
+        if (user_callback && typeof(user_callback) == "function") {
+          changed = true;
+          user_callback(result);
+        }
+      }
+      eval('var result = ' + Internet[url]);
+      return result;
+    }
+  
+    var result = Internet[url];
+
+    if (format == "json")
+      eval('result = ' + result);
+      
+    if (callback)
+      result = callback(result);
+      
+    if (user_callback) {
+      changed = true;
+      if (typeof(user_callback) == "function")
+        result = user_callback(result);
+      else {
+        user_callback = user_callback.on200 || user_callback.onComplete;
+        if (user_callback)
+          result = user_callback(result);
+      }
+    }
+    
+    return result;
+  }
+  
   // JSON callback
   jesterCallback = null;
   
@@ -118,7 +153,7 @@ function setUp () {
   // Path prefixed models
   Resource.model("Post", {prefix: "/users/:user_id"})
   
-  Internet[Post._show_url(1, {user_id: 1})] = {'post': postDetails1};
+  Internet[Post._show_url({id: 1, user_id: 1})] = {'post': postDetails1};
   
   // XML models
   Resource.model("User")
@@ -142,40 +177,7 @@ function setUp () {
   changed = false;
   assert_changed = function() {assert(changed); changed = false;}
   
-  Resource.requestAndParse = function (format, callback, url, options, user_callback, remote) {
-    if (remote && format == "json") {
-      jesterCallback = function(json){
-        result = callback(json);
-        if (user_callback && typeof(user_callback) == "function") {
-          changed = true;
-          user_callback(result);
-        }
-      }
-      eval('var result = ' + Internet[url]);
-      return result;
-    }
-  
-    var result = Internet[url];
-    
-    if (format == "json")
-      eval('result = ' + result);
-      
-    if (callback)
-      result = callback(result);
-      
-    if (user_callback) {
-      changed = true;
-      if (typeof(user_callback) == "function")
-        result = user_callback(result);
-      else {
-        user_callback = user_callback.on200 || user_callback.onComplete;
-        if (user_callback)
-          result = user_callback(result);
-      }
-    }
-    
-    return result;
-  }
+  return true;
 }
 
 
