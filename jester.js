@@ -75,11 +75,10 @@ Object.extend(Jester.Resource, {
       new_model["_" + opt] = options[opt];
     
     // Establish custom URL helpers
-    for (var url in options.urls) {
+    for (var url in options.urls)
       eval('new_model._' + url + '_url = function(params) {return this._url_for("' + url + '", params);}');
-    }
     
-    if(options.checkNew)
+    if (options.checkNew)
       this.buildAttributes(new_model, options.asynchronous);
 
     return new_model;
@@ -169,6 +168,12 @@ Object.extend(Jester.Resource, {
   },
 
   find : function(id, params, callback) {
+    // allow a params hash to be omitted and a callback function given directly
+    if (!callback && typeof(params) == "function") {
+      callback = params;
+      params = null;
+    }
+    
     var findAllWork = bind(this, function(doc) {
       if (!doc) return null;
       
@@ -212,7 +217,7 @@ Object.extend(Jester.Resource, {
   },
   
   build : function(attributes) {
-    return new this(attributes)
+    return new this(attributes);
   },
   
   create : function(attributes, callback) {
@@ -222,12 +227,10 @@ Object.extend(Jester.Resource, {
       return callback(base);
     });
     
-    if (callback)
-    {
+    if (callback) {
       return base.save(createWork);
     }
-    else
-    {
+    else {
       base.save();
       return base;
     }
@@ -256,8 +259,7 @@ Object.extend(Jester.Resource, {
     return this.request(destroyWork, this._destroy_url(id), {method: "delete"}, callback);
   },
   
-  _interpolate: function(string, params)
-  {
+  _interpolate: function(string, params) {
     var result = string;
     for(var val in params) {
       var re = new RegExp(":" + val, "g");
@@ -362,7 +364,6 @@ Object.extend(Jester.Resource, {
           i += 1;
         }
         
-        
         // has_many
         if (relation[singular] && typeof(relation[singular]) == "object" && i == 1) {
           var value = [];
@@ -374,7 +375,12 @@ Object.extend(Jester.Resource, {
             elements[plural][singular] = [elements[plural][singular]];
           
           elements[plural][singular].each( bind(this, function(single) {
-            if (typeof(eval(name)) == "undefined") Jester.Resource.model(name, {prefix: this._prefix, singular: singular, plural: plural});
+            // if the association hasn't been modeled, do a default modeling here
+            // hosted object's prefix and format are inherited, singular and plural are set
+            // from the XML
+            if (eval("typeof(" + name + ")") == "undefined") {
+              Jester.Resource.model(name, {prefix: this._prefix, singular: singular, plural: plural, format: this._format});
+            }
             var base = eval(name + ".build(this._attributesFromTree(single))");
             value.push(base);
           }));
@@ -384,7 +390,11 @@ Object.extend(Jester.Resource, {
           singular = attr;
           var name = singular.capitalize();
           
-          if (typeof(eval(name)) == "undefined") Jester.Resource.model(name, {prefix: this._prefix, singular: singular});
+          // if the association hasn't been modeled, do a default modeling here
+          // hosted object's prefix and format are inherited, singular is set from the XML
+          if (eval("typeof(" + name + ")") == "undefined") {
+            Jester.Resource.model(name, {prefix: this._prefix, singular: singular, format: this._format});
+          }
           value = eval(name + ".build(this._attributesFromTree(value))");
         }
       }

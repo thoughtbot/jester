@@ -233,6 +233,12 @@ function testFind() {
   var eric = User.find(1, {}, {asynchronous: false});
   assertEquals('eric', eric.first_name);
   
+  // test that I can omit the params hash completely if I pass a straight callback
+  User.find(1, function(eric) {
+    assertEquals('eric', eric.first_name);
+    assert_changed();
+  });
+  
   // test path prefixed find
   Resource.model("Post", {prefix: "/users/:user_id"})
   var post = Post.find(1, {user_id: 1})
@@ -341,23 +347,47 @@ function testReload() {
 /********************************************
  ************ ASSOCIATION TESTS *************
  ********************************************/
- 
-function testRelations() {
+
+function testAssociations() {
+  // has_many
   var eric = User.find(1);
+  assertEquals(1, eric._associations.length);
+  assertEquals("posts", eric._associations[0]);
+  assertEquals(Post, eric.posts[0].class);
   assertEquals(2, eric.posts.length);
   
   var john = User.find(2);
   assertEquals(1, john.posts.length);
   
-  assertEquals("has_many object should have correct name.", "Post", eric.posts[0].class.name);
-  assertEquals("has_many object should have correct singular form.", "post", eric.posts[0].class._singular);
-  assertEquals("has_many object should have correct plural form.", "posts", eric.posts[1].class._plural);
+  // auto-model associations if need be
+  var original_url = Post._show_url();
+  Post = undefined;
+  var eric = User.find(1);
+  assertEquals("posts", eric._associations[0]);
+  assertEquals(Post, eric.posts[0].class);
+  assertEquals(original_url, Post._show_url());
+  assertEquals("post", Post._singular);
+  assertEquals(User._format, Post._format);
+  assertEquals(User._prefix, Post._prefix);
   
+  // belongs_to/has_one
+  Resource.model("Post");
   Internet[Post._show_url(1)] = {'post': postIncludeDetails};
   var post = Post.find(1);
-  assertEquals("has_one object should have correct name.", "User", post.user.class.name);
-  assertEquals("has_one object should have correct singular form.", "user", post.user.class._singular);
-  assertEquals("has_one object should have correct plural form.", "users", post.user.class._plural);
+  assertEquals(1, post._associations.length);
+  assertEquals("user", post._associations[0]);
+  assertEquals(User, post.user.class)
+  
+  // auto-model belongs_to/has_one
+  var original_url = User._show_url();
+  User = undefined;
+  var post = Post.find(1);
+  assertEquals("user", post._associations[0]);
+  assertEquals(User, post.user.class);
+  assertEquals(original_url, User._show_url());
+  assertEquals("user", User._singular);
+  assertEquals(Post._format, User._format);
+  assertEquals(Post._prefix, User._prefix);
 }
 
 
