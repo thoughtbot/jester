@@ -87,7 +87,8 @@ Object.extend(Jester.Resource, {
   buildAttributes: function(model, async)
   {
     model = model || this;
-    async = async || false;
+    if (async == null)
+      async = true;
     
     var buildWork = bind(model, function(doc) {
       this._attributes = this._attributesFromTree(doc[this._singular_xml]);
@@ -116,9 +117,8 @@ Object.extend(Jester.Resource, {
   },
 
   requestAndParse : function(format, callback, url, options, user_callback, remote) {
-    if (remote && format == "json" && user_callback) {
+    if (remote && format == "json" && user_callback)
       return this.loadRemoteJSON(url, callback, user_callback)
-    }
     
     parse_and_callback = null;
     if (format.toLowerCase() == "json") {
@@ -289,7 +289,7 @@ Object.extend(Jester.Resource, {
       list : "/" + options.plural + "." + options.format,
       new : "/" + options.plural + "/new." + options.format
     }
-    urls.index = urls.create = urls.list;
+    urls.create = urls.list;
     urls.destroy = urls.update = urls.show;
     
     return urls;
