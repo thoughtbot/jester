@@ -1,15 +1,12 @@
-/* The standard way of declaring a model is:
-   Jester.Resource.model("User")
-   This assumes "user" as a singular form, and "users" as a plural.
-   Prefix rules: If no prefix given, default to the local domain
-     If prefix given, and prefix begins with "http:", take that as the entire prefix,
-        otherwise, treat it as a relative path and append it to the default prefix, adding a slash if necessary.
-     Example valid prefixes, assuming current domain is "www.thoughtbot.com:8080":
-       "http://www.google.com" => http://www.google.com
-       "" or null => http://www.thoughtbot.com:8080
-       "public/forum" => http://www.thoughtbot.com:8080/public/forum
-       "/public/forum" => http://www.thoughtbot.com:8080/public/forum
-*/
+// Jester version 1.5
+// Released October 25th, 2007
+// Homepage: http://www.jesterjs.org
+
+// Compatible and tested with Prototype 1.5.1.1
+
+// Copyright 2007, thoughtbot, inc.
+// Released under the MIT License.
+
 Jester = {}
 Jester.Resource = function(){};
 
