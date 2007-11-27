@@ -186,33 +186,33 @@ function setUp () {
  ********************************************/
 
 function testFind() {
-	var eric = User.find(1);
-	
-	assertEquals("Attributes should be filled in correctly on find().", 'eric', eric.first_name);
-	assert("Boolean attributes should be auto-transformed (when format is XML).", eric.admin);
-	assertEquals("Date attributes should be auto-transformed (when format is XML).", Date, eric.created_at.constructor);
-	assertEquals("Integer attributes should be auto-transformed (when format is XML).", 1, eric.id);
+  var eric = User.find(1);
+  
+  assertEquals("Attributes should be filled in correctly on find().", 'eric', eric.first_name);
+  assert("Boolean attributes should be auto-transformed (when format is XML).", eric.admin);
+  assertEquals("Date attributes should be auto-transformed (when format is XML).", Date, eric.created_at.constructor);
+  assertEquals("Integer attributes should be auto-transformed (when format is XML).", 1, eric.id);
 
-	assertEquals("Eric should have two posts.", 2, eric.posts.length);
-	assertEquals("Eric's first post should have ID 1.", 1, eric.posts[0].id);
-	assertEquals("Eric's post's title wasn't loaded.", 'the title', eric.posts[0].title);
-	assertEquals("Eric's post's body wasn't loaded.", 'the body', eric.posts[0].body);
-	assertEquals("Eric's second post's title wasn't loaded.", 'another title', eric.posts[1].title);
-	assertEquals("Eric's second post's body wasn't loaded.", 'another body', eric.posts[1].body);
-	
-	// failed find
+  assertEquals("Eric should have two posts.", 2, eric.posts.length);
+  assertEquals("Eric's first post should have ID 1.", 1, eric.posts[0].id);
+  assertEquals("Eric's post's title wasn't loaded.", 'the title', eric.posts[0].title);
+  assertEquals("Eric's post's body wasn't loaded.", 'the body', eric.posts[0].body);
+  assertEquals("Eric's second post's title wasn't loaded.", 'another title', eric.posts[1].title);
+  assertEquals("Eric's second post's body wasn't loaded.", 'another body', eric.posts[1].body);
+  
+  // failed find
   var eric = User.find(50);
   assert(eric == null);
-	
-	// with params
+  
+  // with params
   var ericLite = User.find(1, {lite: true});
   assertEquals("eric", ericLite.first_name);
   assertEquals(1, ericLite.id); // make sure ID gets autoset
   assertEquals(2, ericLite._properties.length);
   assert(typeof(ericLite.admin) == "undefined");
-	
-	// test function form of callback
-	User.find(1, {}, function(eric) {
+  
+  // test function form of callback
+  User.find(1, {}, function(eric) {
     assertEquals('eric', eric.first_name);
     assert_changed();
   });
@@ -409,32 +409,32 @@ function testInvalidSave() {
   assert(user.new_record());
 
   Ajax = { Request : function (url, options) {
-	  this.transport = { 
+    this.transport = { 
       status : 200,
-	    responseText : "<errors><error>First name can't be blank</error></errors>"
-	  };
-	}}
-
-	assert(! user.save());
-	assert(! user.valid());
-	assertEquals(1, user.errors.length);
-	assertEquals("First name can't be blank", user.errors[0]);
-
-  var user = User.build();
-	user._setProperties({ 'id' : '1', 'first_name' : '' });
-	assert(! user.new_record());
-
-	Ajax = { Request : function (url, options) {
-	  this.transport = { 
-	    status : 200,
-	    responseText : "<errors><error>First name can't be blank</error></errors>"
-	  };
+      responseText : "<errors><error>First name can't be blank</error></errors>"
+    };
   }}
 
-	assert(! user.save());
-	assert(! user.valid());
-	assertEquals(1, user.errors.length);
-	assertEquals("First name can't be blank", user.errors[0]);
+  assert(! user.save());
+  assert(! user.valid());
+  assertEquals(1, user.errors.length);
+  assertEquals("First name can't be blank", user.errors[0]);
+
+  var user = User.build();
+  user._setProperties({ 'id' : '1', 'first_name' : '' });
+  assert(! user.new_record());
+
+  Ajax = { Request : function (url, options) {
+    this.transport = { 
+      status : 200,
+      responseText : "<errors><error>First name can't be blank</error></errors>"
+    };
+  }}
+
+  assert(! user.save());
+  assert(! user.valid());
+  assertEquals(1, user.errors.length);
+  assertEquals("First name can't be blank", user.errors[0]);
 }
 
 
@@ -445,27 +445,27 @@ function testInvalidSave() {
 
 function testDestroy() {
   var eric = User.build({id: 1})
-	Ajax = { Request : function (url, options) { 
-	    this.transport = { status : 500 };
-	  }
-	}
-	assert(!eric.destroy());
-	assertEquals(1, eric.id);
+  Ajax = { Request : function (url, options) { 
+      this.transport = { status : 500 };
+    }
+  }
+  assert(!eric.destroy());
+  assertEquals(1, eric.id);
   
   var eric = User.build({id: 1})
-	Ajax = { Request : function (url, options) { 
-	    this.transport = { status : 200 };
-	  }
-	}
-	assertEquals(eric, eric.destroy());
-	assertNull(eric.id);
+  Ajax = { Request : function (url, options) { 
+      this.transport = { status : 200 };
+    }
+  }
+  assertEquals(eric, eric.destroy());
+  assertNull(eric.id);
 
   var eric = User.build({id: 1})
   eric.destroy(function(result) {
     assertEquals(eric, eric.destroy());
     assertNull(eric.id);
     assert_changed();
-  });	
+  });  
 }
 
 function testSaveNewRecord() {
@@ -479,12 +479,12 @@ function testSaveNewRecord() {
     };
   }}
 
-	assert(eric.save());
-	assertEquals(1, eric.id);
-	assertEquals(1, eric.attributes().id);
-	
-	var eric = User.build({ 'first_name' : 'eric' });
-	eric.save(function(saved) {
+  assert(eric.save());
+  assertEquals(1, eric.id);
+  assertEquals(1, eric.attributes().id);
+  
+  var eric = User.build({ 'first_name' : 'eric' });
+  eric.save(function(saved) {
     assert(saved);
     assertEquals(1, eric.id);
     assert_changed();
@@ -492,16 +492,16 @@ function testSaveNewRecord() {
 }
 
 function testSaveExistingRecord() {
-	var eric = User.build({ 'id' : '1', 'first_name' : 'eric' });
-	assert(! eric.new_record());
+  var eric = User.build({ 'id' : '1', 'first_name' : 'eric' });
+  assert(! eric.new_record());
 
-	Ajax = { Request : function (url, options) {
-	  this.transport = { status : 200 };
-	}};
+  Ajax = { Request : function (url, options) {
+    this.transport = { status : 200 };
+  }};
 
-	assert(eric.save());
-	
-	eric.save(function(saved) {
+  assert(eric.save());
+  
+  eric.save(function(saved) {
     assert(saved);
     assert_changed();
   });
@@ -571,7 +571,7 @@ function testSetAttributes() {
   assertEquals('admin attribute not updated.', false, eric.admin);
   assertEquals('created_at attribute not preserved.', oldAttrs.created_at, eric.created_at);
   eric.reload();
-	assertEquals('old name attribute not restored.', oldAttrs.first_name, eric.first_name);
+  assertEquals('old name attribute not restored.', oldAttrs.first_name, eric.first_name);
 }
 
 function testUpdateAttributes() {
@@ -586,7 +586,7 @@ function testUpdateAttributes() {
   assertEquals('admin attribute not updated.', false, eric.admin);
   assertEquals('created_at attribute not preserved.', oldAttrs.created_at, eric.created_at);
   eric.reload();
-	assertEquals('new name attribute not preserved.', oldAttrs.first_name, eric.first_name);
+  assertEquals('new name attribute not preserved.', oldAttrs.first_name, eric.first_name);
 }
 
 /********************************************
@@ -620,28 +620,28 @@ function testAttributesFromTree() {
 
 function testErrorsFromJSON() {
   var errorJSON = '[["name", "can\'t be blank"], ["city", "can\'t be blank"]]';
-	var eric = new User();
+  var eric = new User();
   var errors = eric._errorsFromJSON(errorJSON);
   
   assertEquals(2, errors.length);
   assertEquals("Name can't be blank", errors[0]);
-	assertEquals("City can't be blank", errors[1]);
-	
+  assertEquals("City can't be blank", errors[1]);
+  
   assertEquals(false, eric._errorsFromJSON(' '));
   assertEquals(false, eric._errorsFromJSON(''));
   assertEquals(false, eric._errorsFromJSON(null));
 }
 
 function testErrorsFromXML() {
-	var errorXML = "<errors><error>Name can't be blank</error><error>City can't be blank</error></errors>"
-	var eric = new User();
-	var errors = eric._errorsFromXML(errorXML);
-	
-	assertEquals(2, errors.length);
-	assertEquals("Name can't be blank", errors[0]);
-	assertEquals("City can't be blank", errors[1]);
-	
-	assertEquals(false, eric._errorsFromXML(' '));
+  var errorXML = "<errors><error>Name can't be blank</error><error>City can't be blank</error></errors>"
+  var eric = new User();
+  var errors = eric._errorsFromXML(errorXML);
+  
+  assertEquals(2, errors.length);
+  assertEquals("Name can't be blank", errors[0]);
+  assertEquals("City can't be blank", errors[1]);
+  
+  assertEquals(false, eric._errorsFromXML(' '));
   assertEquals(false, eric._errorsFromXML(''));
   assertEquals(false, eric._errorsFromXML(null));
 }
@@ -652,38 +652,38 @@ function testErrorsFromXML() {
 
 function testSetProperties() {
   var eric = User.build()
-	assertUndefined(eric.first_name);
+  assertUndefined(eric.first_name);
 
-	eric._setProperties({ 'first_name' : 'eric' });
-	assertEquals('eric', eric.first_name);
-	assertEquals(1, eric._properties.length);
-	assertEquals('first_name', eric._properties[0]);
+  eric._setProperties({ 'first_name' : 'eric' });
+  assertEquals('eric', eric.first_name);
+  assertEquals(1, eric._properties.length);
+  assertEquals('first_name', eric._properties[0]);
 }
 
 function testSetAssociations() {
   var eric = User.build()
-	assertUndefined(eric.posts);
-	var posts = [Post.find(1)]
+  assertUndefined(eric.posts);
+  var posts = [Post.find(1)]
 
-	eric._setAssociations({ 'posts' : posts });
-	assertEquals(posts, eric.posts);
-	assertEquals(1, eric._associations.length);
-	assertEquals('posts', eric._associations[0]);
+  eric._setAssociations({ 'posts' : posts });
+  assertEquals(posts, eric.posts);
+  assertEquals(1, eric._associations.length);
+  assertEquals('posts', eric._associations[0]);
 }
 
 function testNameAccessors() {
   assertEquals('User', User._name);
-	assertEquals('user', User._singular);
-	assertEquals('users', User._plural);
-	assertEquals(default_prefix(), User._prefix);
-	
-	Resource.model("OrderLineItem");
+  assertEquals('user', User._singular);
+  assertEquals('users', User._plural);
+  assertEquals(default_prefix(), User._prefix);
+  
+  Resource.model("OrderLineItem");
   assertEquals('OrderLineItem', OrderLineItem._name);
-	assertEquals('order_line_item', OrderLineItem._singular);
-	assertEquals('order_line_items', OrderLineItem._plural);
-	assertEquals('order-line-item', OrderLineItem._singular_xml);
-	assertEquals('order-line-items', OrderLineItem._plural_xml);
-	assertEquals(default_prefix(), OrderLineItem._prefix);
+  assertEquals('order_line_item', OrderLineItem._singular);
+  assertEquals('order_line_items', OrderLineItem._plural);
+  assertEquals('order-line-item', OrderLineItem._singular_xml);
+  assertEquals('order-line-items', OrderLineItem._plural_xml);
+  assertEquals(default_prefix(), OrderLineItem._prefix);
 }
       
 function testPrefix() {
@@ -753,14 +753,14 @@ function testNewRecordCheck() {
 function testSetErrors() {
   var errors = ["Name can't be blank", "City can't be blank"]
   Resource.model('User');
-	var eric = new User();
+  var eric = new User();
   assert(eric.valid());
 
-	eric._setErrors(errors);
-	assert(!eric.valid());
-	assertEquals(2, eric.errors.length);
-	assertEquals("Name can't be blank", eric.errors[0]);
-	assertEquals("City can't be blank", eric.errors[1]);
+  eric._setErrors(errors);
+  assert(!eric.valid());
+  assertEquals(2, eric.errors.length);
+  assertEquals("Name can't be blank", eric.errors[0]);
+  assertEquals("City can't be blank", eric.errors[1]);
 }
 
     </script>

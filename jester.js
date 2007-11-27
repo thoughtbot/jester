@@ -108,7 +108,7 @@ Object.extend(Jester.Resource, {
     else
       url += "&";
     url += "callback=jesterCallback";
-    script.src = url
+    script.src = url;
     
     document.firstChild.appendChild(script);
   },
