@@ -50,14 +50,14 @@ Object.extend(Jester.Resource, {
     options.remote       = false;
     
     // Establish prefix
-    var default_prefix = "http://" + window.location.hostname + (window.location.port ? ":" + window.location.port : "")
+    var default_prefix = window.location.protocol + "//" + window.location.hostname + (window.location.port ? ":" + window.location.port : "");
     if (options.prefix && options.prefix.match(/^https?:/))
       options.remote = true;
       
     if (!options.prefix)
       options.prefix = default_prefix;
     
-    if (!options.prefix.match(/^https?:/))
+    if (!options.prefix.match(/^(https?|file):/))
       options.prefix = default_prefix + (options.prefix.match(/^\//) ? "" : "/") + options.prefix;
             
     options.prefix = options.prefix.replace(/\b\/+$/,"");
@@ -744,7 +744,8 @@ function bind(context, func) {
 
 // If there is no object already called Resource, we define one to make things a little cleaner for us.
 if(typeof(Resource) == "undefined")
-  Resource = Jester.Resource
+  Resource = Jester.Resource;
+
 
 
 

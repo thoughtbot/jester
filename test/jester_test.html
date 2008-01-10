@@ -15,7 +15,7 @@
     <script language="JavaScript" type="text/javascript">
 
 function setUp () {
-  default_prefix = function() {return "http://" + window.location.hostname + (window.location.port ? ":" + window.location.port : "");}
+  default_prefix = function() {return window.location.protocol + "//" + window.location.hostname + (window.location.port ? ":" + window.location.port : "");}
   
   ericXML = '<?xml version="1.0" encoding="UTF-8"?><user><created-at type="datetime">2007-04-08T15:12:06-04:00</created-at><id type="integer">1</id><first-name>eric</first-name><admin type="boolean">true</admin></user>'
   camelCaseXML = '<?xml version="1.0" encoding="UTF-8"?><cool-thing><created-at type="datetime">2007-04-08T15:12:06-04:00</created-at><id type="integer">1</id><first-name>eric</first-name><admin type="boolean">true</admin></cool-thing>'
@@ -365,7 +365,7 @@ function testAssociations() {
   var eric = User.find(1);
   assertEquals("posts", eric._associations[0]);
   assertEquals(Post, eric.posts[0].class);
-  assertEquals(original_url, Post._show_url());
+  assertEquals("Auto-generated Post class should have same values as the original one.", original_url, Post._show_url());
   assertEquals("post", Post._singular);
   assertEquals(User._format, Post._format);
   assertEquals(User._prefix, Post._prefix);
