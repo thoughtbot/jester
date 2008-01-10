@@ -353,7 +353,7 @@ function testAssociations() {
   var eric = User.find(1);
   assertEquals(1, eric._associations.length);
   assertEquals("posts", eric._associations[0]);
-  assertEquals(Post, eric.posts[0].class);
+  assertEquals(Post, eric.posts[0].klass);
   assertEquals(2, eric.posts.length);
   
   var john = User.find(2);
@@ -364,7 +364,7 @@ function testAssociations() {
   Post = undefined;
   var eric = User.find(1);
   assertEquals("posts", eric._associations[0]);
-  assertEquals(Post, eric.posts[0].class);
+  assertEquals(Post, eric.posts[0].klass);
   assertEquals("Auto-generated Post class should have same values as the original one.", original_url, Post._show_url());
   assertEquals("post", Post._singular);
   assertEquals(User._format, Post._format);
@@ -376,14 +376,14 @@ function testAssociations() {
   var post = Post.find(1);
   assertEquals(1, post._associations.length);
   assertEquals("user", post._associations[0]);
-  assertEquals(User, post.user.class)
+  assertEquals(User, post.user.klass)
   
   // auto-model belongs_to/has_one
   var original_url = User._show_url();
   User = undefined;
   var post = Post.find(1);
   assertEquals("user", post._associations[0]);
-  assertEquals(User, post.user.class);
+  assertEquals(User, post.user.klass);
   assertEquals(original_url, User._show_url());
   assertEquals("user", User._singular);
   assertEquals(Post._format, User._format);
@@ -543,7 +543,7 @@ function testSaveReloadsUponFullResponse() {
 function testBuild() {
   // test without checking new.xml
   var eric = User.build();
-  assertEquals(User, eric.class);
+  assertEquals(User, eric.klass);
   assertEquals(0, eric._properties.length);
 
   // test with checking new.xml

@@ -13,10 +13,10 @@ Jester.Resource = function(){};
 // Doing it this way forces the validation of the syntax but gives flexibility enough to rename the new class.
 Jester.Constructor = function(model){
   return (function CONSTRUCTOR() {
-    this.class = CONSTRUCTOR;
+    this.klass = CONSTRUCTOR;
     this.initialize.apply(this, arguments);
     this.after_initialization.apply(this, arguments);
-  }).toSource().replace(/CONSTRUCTOR/g, model);
+  }).toString().replace(/CONSTRUCTOR/g, model);
 }
 
 // universal Jester callback holder for remote JSON loading
@@ -40,7 +40,7 @@ Object.extend(Jester.Resource, {
     var default_options = {
       format:   "xml",
       singular: model.underscore(),
-      name:     model,
+      name:     model
     }
     options              = Object.extend(default_options, options);
     options.format       = options.format.toLowerCase();
@@ -282,9 +282,9 @@ Object.extend(Jester.Resource, {
   
   _default_urls : function(options) {
     urls = {
-      show : "/" + options.plural + "/:id." + options.format,
-      list : "/" + options.plural + "." + options.format,
-      new : "/" + options.plural + "/new." + options.format
+      'show' : "/" + options.plural + "/:id." + options.format,
+      'list' : "/" + options.plural + "." + options.format,
+      'new' : "/" + options.plural + "/new." + options.format
     }
     urls.create = urls.list;
     urls.destroy = urls.update = urls.show;
@@ -441,14 +441,14 @@ Object.extend(Jester.Resource.prototype, {
     this._properties = [];
     this._associations = [];
     
-    this.setAttributes(this.class._attributes || {});
+    this.setAttributes(this.klass._attributes || {});
     this.setAttributes(attributes);
 
     // Initialize with no errors
     this.errors = [];
     
     // Establish custom URL helpers
-    for (var url in this.class._urls)
+    for (var url in this.klass._urls)
       eval('this._' + url + '_url = function(params) {return this._url_for("' + url + '", params);}');
   },
   after_initialization: function(){},
@@ -468,9 +468,9 @@ Object.extend(Jester.Resource.prototype, {
     
     if (this.id) {
       if (callback)
-        return this.class.find(this.id, {}, reloadWork);
+        return this.klass.find(this.id, {}, reloadWork);
       else
-        return reloadWork(this.class.find(this.id));
+        return reloadWork(this.klass.find(this.id));
     }
     else
       return this;
@@ -496,7 +496,7 @@ Object.extend(Jester.Resource.prototype, {
         return false;
     });
     
-    return this.class.request(destroyWork, this._destroy_url(), {method: "delete"}, callback);
+    return this.klass.request(destroyWork, this._destroy_url(), {method: "delete"}, callback);
   },
   
   save : function(callback) {
@@ -514,8 +514,8 @@ Object.extend(Jester.Resource.prototype, {
           }
           else {
             var doc = Jester.Tree.parseXML(transport.responseText);
-            if (doc[this.class._singular_xml])
-              attributes = this._attributesFromTree(doc[this.class._singular_xml]);
+            if (doc[this.klass._singular_xml])
+              attributes = this._attributesFromTree(doc[this.klass._singular_xml]);
           }
           if (attributes)
             this._resetAttributes(attributes);
@@ -554,11 +554,11 @@ Object.extend(Jester.Resource.prototype, {
     // collect params
     var params = {};
     (this._properties).each( bind(this, function(value, i) {
-      params[this.class._singular + "[" + value + "]"] = this[value];
+      params[this.klass._singular + "[" + value + "]"] = this[value];
     }));
     
     // send the request
-    return this.class.request(saveWork, url, {parameters: params, method: method}, callback);
+    return this.klass.request(saveWork, url, {parameters: params, method: method}, callback);
   },
   
   setAttributes : function(attributes)
@@ -591,12 +591,12 @@ Object.extend(Jester.Resource.prototype, {
   
   _attributesFromJSON: function()
   {
-    return this.class._attributesFromJSON.apply(this.class, arguments);
+    return this.klass._attributesFromJSON.apply(this.klass, arguments);
   },
   
   _attributesFromTree: function()
   {
-    return this.class._attributesFromTree.apply(this.class, arguments);
+    return this.klass._attributesFromTree.apply(this.klass, arguments);
   },
   
   _errorsFrom : function(raw) {
@@ -709,7 +709,7 @@ Object.extend(Jester.Resource.prototype, {
     if (typeof(params) == "object" && !params.id)
       params.id = this.id;
     
-    return this.class._url_for(action, params);
+    return this.klass._url_for(action, params);
   }
   
 });
