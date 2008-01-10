@@ -503,7 +503,7 @@ Object.extend(Jester.Resource.prototype, {
     var saveWork = bind(this, function(transport) {
       var saved = false;
 
-      if (transport.responseText) {
+      if (transport.responseText && (transport.responseText.strip() != "")) {
         var errors = this._errorsFrom(transport.responseText);
         if (errors)
           this._setErrors(errors);
