@@ -235,17 +235,20 @@ Object.extend(Jester.Resource, {
   
   // If not given an ID, destroys itself, if it has an ID.  If given an ID, destroys that record.
   // You can call destroy(), destroy(1), destroy(callback()), or destroy(1, callback()), and it works as you expect.
-  destroy : function(given_id, callback) {
-    if (typeof(given_id) == "function") {
-      callback = given_id;
-      given_id = null;
+  destroy : function(params, callback) {
+    if (typeof(params) == "function") {
+      callback = params;
+      params = null;
     }
-    var id = given_id || this.id;
-    if (!id) return false;
+    if (typeof(params) == "number") {
+      params = {id: params};
+    }
+    params.id = params.id || this.id;
+    if (!params.id) return false;
     
     var destroyWork = bind(this, function(transport) {
       if (transport.status == 200) {
-        if (!given_id || this.id == given_id)
+        if (!params.id || this.id == params.id)
           this.id = null;
         return this;
       }
@@ -253,7 +256,7 @@ Object.extend(Jester.Resource, {
         return false;
     });
     
-    return this.request(destroyWork, this._destroy_url(id), {method: "delete"}, callback);
+    return this.request(destroyWork, this._destroy_url(params), {method: "delete"}, callback);
   },
   
   _interpolate: function(string, params) {
@@ -541,21 +544,24 @@ Object.extend(Jester.Resource.prototype, {
     var url = null;
     var method = null;
     
+    // collect params
+    var params = {};
+    var urlParams = {};
+    (this._properties).each( bind(this, function(value, i) {
+      params[this.klass._singular + "[" + value + "]"] = this[value];
+      urlParams[value] = this[value];
+    }));
+    
     // distinguish between create and update
     if (this.new_record()) {
-      url = this._create_url();
+      url = this._create_url(urlParams);
       method = "post";
     }
     else {
-      url = this._update_url();
+      url = this._update_url(urlParams);
       method = "put";
     }
-    
-    // collect params
-    var params = {};
-    (this._properties).each( bind(this, function(value, i) {
-      params[this.klass._singular + "[" + value + "]"] = this[value];
-    }));
+
     
     // send the request
     return this.klass.request(saveWork, url, {parameters: params, method: method}, callback);
