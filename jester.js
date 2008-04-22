@@ -1,8 +1,7 @@
 // Jester version 1.5
 // Released October 25th, 2007
-// Homepage: http://www.jesterjs.org
 
-// Compatible and tested with Prototype 1.5.1.1
+// Compatible, tested with Prototype 1.5.1.1
 
 // Copyright 2007, thoughtbot, inc.
 // Released under the MIT License.
