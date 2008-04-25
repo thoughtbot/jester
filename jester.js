@@ -626,7 +626,7 @@ Object.extend(Jester.Resource.prototype, {
     if (!xml) return false;
     var doc = Jester.Tree.parseXML(xml);
 
-    if (doc.errors) {
+    if (doc && doc.errors) {
       var errors = [];
       if (typeof(doc.errors.error) == "string")
         doc.errors.error = [doc.errors.error];
