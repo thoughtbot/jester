@@ -256,15 +256,16 @@ Object.extend(Jester.Resource, {
   },
   
   _interpolate: function(string, params) {
+    if (!params) return string;
+    
     var result = string;
-    for(var val in params) {
-      var re = new RegExp(":" + val, "g");
-      if(result.match(re))
-      {
-        result = result.replace(re, params[val]);
-        delete params[val];
+    params.each(function(pair) {
+      var re = new RegExp(":" + pair.key, "g");
+      if (result.match(re)) {
+        result = result.replace(re, pair.value);
+        params.unset(pair.key);
       }
-    }
+    });
     return result;
   },
   
