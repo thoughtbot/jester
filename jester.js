@@ -77,6 +77,9 @@ Object.extend(Jester.Resource, {
     if (options.checkNew)
       this.buildAttributes(new_model, options.asynchronous);
 
+    if (window)
+      window[model] = new_model;
+
     return new_model;
   },
   

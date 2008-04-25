@@ -649,6 +649,11 @@ function testErrorsFromXML() {
 /********************************************
  ************ INTERNAL TESTS ****************
  ********************************************/
+ 
+ function testGlobalScope() {
+  // IE7 compatibility
+  assertEquals("IE7 incompatibility", User, window.User);
+ }
 
 function testSetProperties() {
   var eric = User.build()
