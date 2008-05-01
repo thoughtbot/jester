@@ -627,16 +627,17 @@ function testAttributesFromTree() {
 
 function testErrorsFromJSON() {
   var errorJSON = '[["name", "can\'t be blank"], ["city", "can\'t be blank"]]';
-  var eric = new User();
-  var errors = eric._errorsFromJSON(errorJSON);
+  Resource.model('User', {format: 'json'});
+  var eric = User.build();
+  var errors = eric._errorsFrom(errorJSON);
   
   assertEquals(2, errors.length);
   assertEquals("Name can't be blank", errors[0]);
   assertEquals("City can't be blank", errors[1]);
   
-  assertEquals(false, eric._errorsFromJSON(' '));
-  assertEquals(false, eric._errorsFromJSON(''));
-  assertEquals(false, eric._errorsFromJSON(null));
+  assertEquals(false, eric._errorsFrom(' '));
+  assertEquals(false, eric._errorsFrom(''));
+  assertEquals(false, eric._errorsFrom(null));
 }
 
 function testErrorsFromXML() {

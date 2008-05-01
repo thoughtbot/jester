@@ -516,7 +516,7 @@ Object.extend(Jester.Resource.prototype, {
           this._setErrors(errors);
         else {
           var attributes;
-          if (this._format == "json") {
+          if (this.klass._format == "json") {
             attributes = this._attributesFromJSON(transport.responseText);
           }
           else {
@@ -607,9 +607,8 @@ Object.extend(Jester.Resource.prototype, {
   },
   
   _errorsFrom : function(raw) {
-    if (this._format == "json") {
+    if (this.klass._format == "json")
       return this._errorsFromJSON(raw);
-    }
     else
       return this._errorsFromXML(raw);
   },
