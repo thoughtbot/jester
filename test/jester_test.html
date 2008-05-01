@@ -92,6 +92,7 @@ function setUp () {
     'admin' : { '@type' : 'boolean', '#text' : 'false' },
     'created_at' : { '@type' : 'datetime' }
   }
+  newUserJSON = '{attributes: {first_name: null, admin: null, created_at: null}}'
   
   Resource.requestAndParse = function (format, callback, url, options, user_callback, remote) {
     if (remote && format == "json") {
@@ -149,6 +150,7 @@ function setUp () {
   Internet[User._show_url(1)] = ericJSON;
   Internet[Post._show_url(1)] = postJSON;
   Internet[User._list_url()] = usersJSON;
+  Internet[User._new_url()] = newUserJSON;
   
   // Path prefixed models
   Resource.model("Post", {prefix: "/users/:user_id"})
@@ -548,6 +550,11 @@ function testBuild() {
 
   // test with checking new.xml
   Resource.model('User', {checkNew: true});
+  var eric = User.build();
+  assertEquals(3, eric._properties.length);
+  
+  // test with checking new.json
+  Resource.model('User', {checkNew: true, format: 'json'});
   var eric = User.build();
   assertEquals(3, eric._properties.length);
   

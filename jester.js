@@ -75,7 +75,7 @@ Object.extend(Jester.Resource, {
       eval('new_model._' + url + '_url = function(params) {return this._url_for("' + url + '", params);}');
     
     if (options.checkNew)
-      this.buildAttributes(new_model, options.asynchronous);
+      this.buildAttributes(new_model, options);
 
     if (window)
       window[model] = new_model;
@@ -83,16 +83,20 @@ Object.extend(Jester.Resource, {
     return new_model;
   },
   
-  buildAttributes: function(model, async)
-  {
+  buildAttributes: function(model, options) {
     model = model || this;
+    var async = options.asynchronous;
+    
     if (async == null)
       async = true;
     
     var buildWork = bind(model, function(doc) {
-      this._attributes = this._attributesFromTree(doc[this._singular_xml]);
+      if (this._format == "json")
+        this._attributes = this._attributesFromJSON(doc);
+      else
+        this._attributes = this._attributesFromTree(doc[this._singular_xml]);
     });
-    model.requestAndParse("xml", buildWork, model._new_url(), {asynchronous: async});
+    model.requestAndParse(options.format, buildWork, model._new_url(), {asynchronous: async});
   },
   
   loadRemoteJSON : function(url, callback, user_callback) {
