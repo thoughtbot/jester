@@ -1,8 +1,7 @@
 // Jester version 1.5
 // Released October 25th, 2007
-// Homepage: http://www.jesterjs.org
 
-// Compatible and tested with Prototype 1.5.1.1
+// Compatible, tested with Prototype 1.6.0.2
 
 // Copyright 2007, thoughtbot, inc.
 // Released under the MIT License.
@@ -76,21 +75,28 @@ Object.extend(Jester.Resource, {
       eval('new_model._' + url + '_url = function(params) {return this._url_for("' + url + '", params);}');
     
     if (options.checkNew)
-      this.buildAttributes(new_model, options.asynchronous);
+      this.buildAttributes(new_model, options);
+
+    if (window)
+      window[model] = new_model;
 
     return new_model;
   },
   
-  buildAttributes: function(model, async)
-  {
+  buildAttributes: function(model, options) {
     model = model || this;
+    var async = options.asynchronous;
+    
     if (async == null)
       async = true;
     
     var buildWork = bind(model, function(doc) {
-      this._attributes = this._attributesFromTree(doc[this._singular_xml]);
+      if (this._format == "json")
+        this._attributes = this._attributesFromJSON(doc);
+      else
+        this._attributes = this._attributesFromTree(doc[this._singular_xml]);
     });
-    model.requestAndParse("xml", buildWork, model._new_url(), {asynchronous: async});
+    model.requestAndParse(options.format, buildWork, model._new_url(), {asynchronous: async});
   },
   
   loadRemoteJSON : function(url, callback, user_callback) {
@@ -260,15 +266,16 @@ Object.extend(Jester.Resource, {
   },
   
   _interpolate: function(string, params) {
+    if (!params) return string;
+    
     var result = string;
-    for(var val in params) {
-      var re = new RegExp(":" + val, "g");
-      if(result.match(re))
-      {
-        result = result.replace(re, params[val]);
-        delete params[val];
+    params.each(function(pair) {
+      var re = new RegExp(":" + pair.key, "g");
+      if (result.match(re)) {
+        result = result.replace(re, pair.value);
+        params.unset(pair.key);
       }
-    }
+    });
     return result;
   },
   
@@ -512,7 +519,7 @@ Object.extend(Jester.Resource.prototype, {
           this._setErrors(errors);
         else {
           var attributes;
-          if (this._format == "json") {
+          if (this.klass._format == "json") {
             attributes = this._attributesFromJSON(transport.responseText);
           }
           else {
@@ -606,9 +613,8 @@ Object.extend(Jester.Resource.prototype, {
   },
   
   _errorsFrom : function(raw) {
-    if (this._format == "json") {
+    if (this.klass._format == "json")
       return this._errorsFromJSON(raw);
-    }
     else
       return this._errorsFromXML(raw);
   },
@@ -633,7 +639,7 @@ Object.extend(Jester.Resource.prototype, {
     if (!xml) return false;
     var doc = Jester.Tree.parseXML(xml);
 
-    if (doc.errors) {
+    if (doc && doc.errors) {
       var errors = [];
       if (typeof(doc.errors.error) == "string")
         doc.errors.error = [doc.errors.error];
