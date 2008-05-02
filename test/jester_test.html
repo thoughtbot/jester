@@ -446,7 +446,7 @@ function testInvalidSave() {
  ********************************************/
 
 function testDestroy() {
-  /*var eric = User.build({id: 1})
+  var eric = User.build({id: 1})
   Ajax = { Request : function (url, options) {
       this.transport = { status : 500 };
     }
@@ -467,7 +467,7 @@ function testDestroy() {
     assertEquals(eric, eric.destroy());
     assertNull(eric.id);
     assert_changed();
-  });*/
+  });
 
   // Path prefixed destroy
   Resource.model("Post", {prefix: "/users/:user_id"});
