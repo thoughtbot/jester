@@ -28,7 +28,7 @@ Object.extend(Jester.Resource, {
     new_model = eval(model + " = " + Jester.Constructor(model));
     new_model.prototype = new Jester.Resource();
     Object.extend(new_model, Jester.Resource);
-    
+
     // We delay instantiating XML.ObjTree() so that it can be listed at the end of this file instead of the beginning
     if (!Jester.Tree) {
       Jester.Tree = new XML.ObjTree();
@@ -47,20 +47,20 @@ Object.extend(Jester.Resource, {
     options.singular_xml = options.singular.replace(/_/g, "-");
     options.plural_xml   = options.plural.replace(/_/g, "-");
     options.remote       = false;
-    
+
     // Establish prefix
     var default_prefix = window.location.protocol + "//" + window.location.hostname + (window.location.port ? ":" + window.location.port : "");
     if (options.prefix && options.prefix.match(/^https?:/))
       options.remote = true;
-      
+
     if (!options.prefix)
       options.prefix = default_prefix;
-    
+
     if (!options.prefix.match(/^(https?|file):/))
       options.prefix = default_prefix + (options.prefix.match(/^\//) ? "" : "/") + options.prefix;
-            
+
     options.prefix = options.prefix.replace(/\b\/+$/,"");
-    
+
     // Establish custom URLs
     options.urls = Object.extend(this._default_urls(options), options.urls);
 
@@ -69,11 +69,11 @@ Object.extend(Jester.Resource, {
     new_model.options = options;
     for(var opt in options)
       new_model["_" + opt] = options[opt];
-    
+
     // Establish custom URL helpers
     for (var url in options.urls)
       eval('new_model._' + url + '_url = function(params) {return this._url_for("' + url + '", params);}');
-    
+
     if (options.checkNew)
       this.buildAttributes(new_model, options);
 
@@ -82,14 +82,14 @@ Object.extend(Jester.Resource, {
 
     return new_model;
   },
-  
+
   buildAttributes: function(model, options) {
     model = model || this;
     var async = options.asynchronous;
-    
+
     if (async == null)
       async = true;
-    
+
     var buildWork = bind(model, function(doc) {
       if (this._format == "json")
         this._attributes = this._attributesFromJSON(doc);
@@ -98,7 +98,7 @@ Object.extend(Jester.Resource, {
     });
     model.requestAndParse(options.format, buildWork, model._new_url(), {asynchronous: async});
   },
-  
+
   loadRemoteJSON : function(url, callback, user_callback) {
     // tack on user_callback if there is one, and only if it's really a function
     if (typeof(user_callback) == "function")
@@ -108,21 +108,21 @@ Object.extend(Jester.Resource, {
 
     var script = document.createElement("script");
     script.type = "text/javascript";
-    
+
     if (url.indexOf("?") == -1)
       url += "?";
     else
       url += "&";
     url += "callback=jesterCallback";
     script.src = url;
-    
+
     document.firstChild.appendChild(script);
   },
 
   requestAndParse : function(format, callback, url, options, user_callback, remote) {
     if (remote && format == "json" && user_callback)
       return this.loadRemoteJSON(url, callback, user_callback)
-    
+
     parse_and_callback = null;
     if (format.toLowerCase() == "json") {
       parse_and_callback = function(transport) {
@@ -158,7 +158,7 @@ Object.extend(Jester.Resource, {
     }
     else
       user_callback = function(arg){return arg;}
-    
+
     if (options.asynchronous) {
       options.onComplete = function(transport, json) {user_callback(callback(transport), json);}
       return new Ajax.Request(url, options).transport;
@@ -176,12 +176,12 @@ Object.extend(Jester.Resource, {
       callback = params;
       params = null;
     }
-    
+
     var findAllWork = bind(this, function(doc) {
       if (!doc) return null;
-      
+
       var collection = this._loadCollection(doc);
-      
+
       if (!collection) return null;
 
       // This is better than requiring the controller to support a "limit" parameter
@@ -193,9 +193,9 @@ Object.extend(Jester.Resource, {
 
     var findOneWork = bind(this, function(doc) {
       if (!doc) return null;
-      
+
       var base = this._loadSingle(doc);
-      
+
       // if there were no properties, it was probably not actually loaded
       if (!base || base._properties.length == 0) return null;
 
@@ -213,23 +213,23 @@ Object.extend(Jester.Resource, {
       if (isNaN(parseInt(id))) return null;
       if (!params) params = {};
       params.id = id;
-      
+
       var url = this._show_url(params);
       return this.requestAndParse(this._format, findOneWork, url, {}, callback, this._remote);
     }
   },
-  
+
   build : function(attributes) {
     return new this(attributes);
   },
-  
+
   create : function(attributes, callback) {
     var base = new this(attributes);
-    
+
     createWork = bind(this, function(saved) {
       return callback(base);
     });
-    
+
     if (callback) {
       return base.save(createWork);
     }
@@ -238,9 +238,13 @@ Object.extend(Jester.Resource, {
       return base;
     }
   },
-  
-  // If not given an ID, destroys itself, if it has an ID.  If given an ID, destroys that record.
-  // You can call destroy(), destroy(1), destroy(callback()), or destroy(1, callback()), and it works as you expect.
+
+  // Destroys a REST object.  Can be used as follows:
+  // object.destroy() - when called on an instance of a model, destroys that instance
+  // Model.destroy(1) - destroys the Model object with ID 1
+  // Model.destroy({parent: 3, id: 1}) - destroys the Model object with Parent ID 3 and ID 1
+  //
+  // Any of these forms can also be passed a callback function as an additional parameter and it works as you expect.
   destroy : function(params, callback) {
     if (typeof(params) == "function") {
       callback = params;
@@ -251,7 +255,7 @@ Object.extend(Jester.Resource, {
     }
     params.id = params.id || this.id;
     if (!params.id) return false;
-    
+
     var destroyWork = bind(this, function(transport) {
       if (transport.status == 200) {
         if (!params.id || this.id == params.id)
@@ -261,13 +265,13 @@ Object.extend(Jester.Resource, {
       else
         return false;
     });
-    
+
     return this.request(destroyWork, this._destroy_url(params), {method: "delete"}, callback);
   },
-  
+
   _interpolate: function(string, params) {
     if (!params) return string;
-    
+
     var result = string;
     params.each(function(pair) {
       var re = new RegExp(":" + pair.key, "g");
@@ -278,18 +282,18 @@ Object.extend(Jester.Resource, {
     });
     return result;
   },
-  
+
   _url_for : function(action, params) {
     if (!this._urls[action]) return "";
     // if an integer is sent, it's assumed just the ID is a parameter
     if (typeof(params) == "number") params = {id: params}
-    
+
     if (params) params = $H(params);
-    
+
     var url = this._interpolate(this._prefix + this._urls[action], params)
     return url + (params && params.any() ? "?" + params.toQueryString() : "");
   },
-  
+
   _default_urls : function(options) {
     urls = {
       'show' : "/" + options.plural + "/:id." + options.format,
@@ -298,17 +302,17 @@ Object.extend(Jester.Resource, {
     }
     urls.create = urls.list;
     urls.destroy = urls.update = urls.show;
-    
+
     return urls;
   },
-  
+
   // Converts a JSON hash returns from ActiveRecord::Base#to_json into a hash of attribute values
   // Does not handle associations, as AR's #to_json doesn't either
   // Also, JSON doesn't include room to store types, so little auto-transforming is done here (just on 'id')
   _attributesFromJSON : function(json) {
     if (!json || json.constructor != Object) return false;
     if (json.attributes) json = json.attributes;
-    
+
     var attributes = {};
     var i = 0;
     for (var attr in json) {
@@ -323,10 +327,10 @@ Object.extend(Jester.Resource, {
       i += 1;
     }
     if (i == 0) return false; // empty hashes should just return false
-    
+
     return attributes;
   },
-  
+
   // Converts the XML tree returned from a single object into a hash of attribute values
   _attributesFromTree : function(elements) {
     var attributes = {}
@@ -339,10 +343,10 @@ Object.extend(Jester.Resource, {
         else
           value = undefined;
       }
-      
+
       // handle empty value (pass it through)
       if (!value) {}
-      
+
       // handle scalars
       else if (typeof(value) == "string") {
         // perform any useful type transformations
@@ -360,7 +364,7 @@ Object.extend(Jester.Resource, {
       // handle arrays (associations)
       else {
         var relation = value; // rename for clarity in the context of an association
-        
+
         // first, detect if it's has_one/belongs_to, or has_many
         var i = 0;
         var singular = null;
@@ -370,17 +374,17 @@ Object.extend(Jester.Resource, {
             singular = val;
           i += 1;
         }
-        
+
         // has_many
         if (relation[singular] && typeof(relation[singular]) == "object" && i == 1) {
           var value = [];
           var plural = attr;
           var name = singular.camelize().capitalize();
-          
+
           // force array
           if (!(elements[plural][singular].length > 0))
             elements[plural][singular] = [elements[plural][singular]];
-          
+
           elements[plural][singular].each( bind(this, function(single) {
             // if the association hasn't been modeled, do a default modeling here
             // hosted object's prefix and format are inherited, singular and plural are set
@@ -396,7 +400,7 @@ Object.extend(Jester.Resource, {
         else {
           singular = attr;
           var name = singular.capitalize();
-          
+
           // if the association hasn't been modeled, do a default modeling here
           // hosted object's prefix and format are inherited, singular is set from the XML
           if (eval("typeof(" + name + ")") == "undefined") {
@@ -405,25 +409,25 @@ Object.extend(Jester.Resource, {
           value = eval(name + ".build(this._attributesFromTree(value))");
         }
       }
-      
+
       // transform attribute name if needed
       attribute = attr.replace(/-/g, "_");
       attributes[attribute] = value;
     }
-    
+
     return attributes;
   },
-  
+
   _loadSingle : function(doc) {
     var attributes;
     if (this._format == "json")
       attributes = this._attributesFromJSON(doc);
     else
       attributes = this._attributesFromTree(doc[this._singular_xml]);
-    
+
     return this.build(attributes);
   },
-  
+
   _loadCollection : function(doc) {
     var collection;
     if (this._format == "json") {
@@ -435,14 +439,14 @@ Object.extend(Jester.Resource, {
       // if only one result, wrap it in an array
       if (!Jester.Resource.elementHasMany(doc[this._plural_xml]))
         doc[this._plural_xml][this._singular_xml] = [doc[this._plural_xml][this._singular_xml]];
-      
+
       collection = doc[this._plural_xml][this._singular_xml].map( bind(this, function(elem) {
         return this.build(this._attributesFromTree(elem));
       }));
     }
     return collection;
   }
-  
+
 });
 
 Object.extend(Jester.Resource.prototype, {
@@ -450,32 +454,32 @@ Object.extend(Jester.Resource.prototype, {
     // Initialize no attributes, no associations
     this._properties = [];
     this._associations = [];
-    
+
     this.setAttributes(this.klass._attributes || {});
     this.setAttributes(attributes);
 
     // Initialize with no errors
     this.errors = [];
-    
+
     // Establish custom URL helpers
     for (var url in this.klass._urls)
       eval('this._' + url + '_url = function(params) {return this._url_for("' + url + '", params);}');
   },
   after_initialization: function(){},
-  
+
   new_record : function() {return !(this.id);},
   valid : function() {return ! this.errors.any();},
-  
+
   reload : function(callback) {
     var reloadWork = bind(this, function(copy) {
       this._resetAttributes(copy.attributes(true));
-  
+
       if (callback)
         return callback(this);
       else
         return this;
     });
-    
+
     if (this.id) {
       if (callback)
         return this.klass.find(this.id, {}, reloadWork);
@@ -485,7 +489,7 @@ Object.extend(Jester.Resource.prototype, {
     else
       return this;
   },
-  
+
   // If not given an ID, destroys itself, if it has an ID.  If given an ID, destroys that record.
   // You can call destroy(), destroy(1), destroy(callback()), or destroy(1, callback()), and it works as you expect.
   destroy : function(given_id, callback) {
@@ -495,7 +499,7 @@ Object.extend(Jester.Resource.prototype, {
     }
     var id = given_id || this.id;
     if (!id) return false;
-    
+
     var destroyWork = bind(this, function(transport) {
       if (transport.status == 200) {
         if (!given_id || this.id == given_id)
@@ -505,10 +509,10 @@ Object.extend(Jester.Resource.prototype, {
       else
         return false;
     });
-    
+
     return this.klass.request(destroyWork, this._destroy_url(), {method: "delete"}, callback);
   },
-  
+
   save : function(callback) {
     var saveWork = bind(this, function(transport) {
       var saved = false;
@@ -544,13 +548,13 @@ Object.extend(Jester.Resource.prototype, {
 
       return (transport.status >= 200 && transport.status < 300 && this.errors.length == 0);
     });
-  
+
     // reset errors
     this._setErrors([]);
-  
+
     var url = null;
     var method = null;
-    
+
     // collect params
     var params = {};
     var urlParams = {};
@@ -558,7 +562,7 @@ Object.extend(Jester.Resource.prototype, {
       params[this.klass._singular + "[" + value + "]"] = this[value];
       urlParams[value] = this[value];
     }));
-    
+
     // distinguish between create and update
     if (this.new_record()) {
       url = this._create_url(urlParams);
@@ -569,23 +573,23 @@ Object.extend(Jester.Resource.prototype, {
       method = "put";
     }
 
-    
+
     // send the request
     return this.klass.request(saveWork, url, {parameters: params, method: method}, callback);
   },
-  
+
   setAttributes : function(attributes)
   {
     $H(attributes).each(bind(this, function(attr){ this._setAttribute(attr.key, attr.value) }));
     return attributes;
   },
-  
+
   updateAttributes : function(attributes, callback)
   {
     this.setAttributes(attributes);
     return this.save(callback);
   },
-  
+
   // mimics ActiveRecord's behavior of omitting associations, but keeping foreign keys
   attributes : function(include_associations) {
     var attributes = {}
@@ -597,28 +601,28 @@ Object.extend(Jester.Resource.prototype, {
     }
     return attributes;
   },
-    
+
   /*
     Internal methods.
   */
-  
+
   _attributesFromJSON: function()
   {
     return this.klass._attributesFromJSON.apply(this.klass, arguments);
   },
-  
+
   _attributesFromTree: function()
   {
     return this.klass._attributesFromTree.apply(this.klass, arguments);
   },
-  
+
   _errorsFrom : function(raw) {
     if (this.klass._format == "json")
       return this._errorsFromJSON(raw);
     else
       return this._errorsFromXML(raw);
   },
-  
+
     // Pulls errors from JSON
   _errorsFromJSON : function(json) {
     try {
@@ -626,14 +630,14 @@ Object.extend(Jester.Resource.prototype, {
     } catch(e) {
       return false;
     }
-    
+
     if (!(json && json.constructor == Array && json[0] && json[0].constructor == Array)) return false;
-    
+
     return json.map(function(pair) {
       return pair[0].capitalize() + " " + pair[1];
     });
   },
-  
+
   // Pulls errors from XML
   _errorsFromXML : function(xml) {
     if (!xml) return false;
@@ -643,22 +647,22 @@ Object.extend(Jester.Resource.prototype, {
       var errors = [];
       if (typeof(doc.errors.error) == "string")
         doc.errors.error = [doc.errors.error];
-      
+
       doc.errors.error.each(function(value, index) {
         errors.push(value);
       });
-      
+
       return errors;
     }
     else return false;
   },
-  
+
   // Sets errors with an array.  Could be extended at some point to include breaking error messages into pairs (attribute, msg).
   _setErrors : function(errors) {
     this.errors = errors;
   },
-  
-  
+
+
   // Sets all attributes and associations at once
   // Deciding between the two on whether the attribute is a complex object or a scalar
   _resetAttributes : function(attributes) {
@@ -666,64 +670,64 @@ Object.extend(Jester.Resource.prototype, {
     for (var attr in attributes)
       this._setAttribute(attr, attributes[attr]);
   },
-  
+
   _setAttribute : function(attribute, value) {
     if (value && typeof(value) == "object" && value.constructor != Date)
       this._setAssociation(attribute, value);
     else
       this._setProperty(attribute, value);
   },
-  
+
   _setProperties : function(properties) {
     this._clearProperties();
     for (var prop in properties)
       this._setProperty(prop, properties[prop])
   },
-  
+
   _setAssociations : function(associations) {
     this._clearAssociations();
     for (var assoc in associations)
       this._setAssociation(assoc, associations[assoc])
   },
-      
-  _setProperty : function(property, value) {  
+
+  _setProperty : function(property, value) {
     this[property] = value;
     if (!(this._properties.include(property)))
-      this._properties.push(property);  
+      this._properties.push(property);
   },
-  
+
   _setAssociation : function(association, value) {
     this[association] = value;
     if (!(this._associations.include(association)))
       this._associations.push(association);
   },
-  
+
   _clear : function() {
     this._clearProperties();
     this._clearAssociations();
   },
-  
+
   _clearProperties : function() {
     for (var i=0; i<this._properties.length; i++)
       this[this._properties[i]] = null;
     this._properties = [];
   },
-  
+
   _clearAssociations : function() {
     for (var i=0; i<this._associations.length; i++)
       this[this._associations[i]] = null;
     this._associations = [];
   },
-  
+
   // helper URLs
   _url_for : function(action, params) {
     if (!params) params = this.id;
     if (typeof(params) == "object" && !params.id)
       params.id = this.id;
-    
+
     return this.klass._url_for(action, params);
   }
-  
+
 });
 
 // Returns true if the element has more objects beneath it, or just 1 or more attributes.
@@ -738,7 +742,7 @@ Jester.Resource.elementHasMany = function(element) {
       singular = val;
     i += 1;
   }
-  
+
   return (element[singular] && typeof(element[singular]) == "object" && element[singular].length != null && i == 1);
 }
 
@@ -761,7 +765,7 @@ if(typeof(Resource) == "undefined")
 
 
 
-/* 
+/*
   Inflector library, contributed graciously to Jester by Ryan Schuft.
   The library in full is a complete port of Rails' Inflector, though Jester only uses its pluralization.
   Its home page can be found at: http://code.google.com/p/inflection-js/

@@ -3,7 +3,7 @@
 
 <html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">  
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <title>jester.js</title>
     <script language="JavaScript" type="text/javascript" src="jsunit/app/jsUnitCore.js"></script>
     <script language="JavaScript" type="text/javascript" src="../prototype.js"></script>
@@ -16,7 +16,7 @@
 
 function setUp () {
   default_prefix = function() {return window.location.protocol + "//" + window.location.hostname + (window.location.port ? ":" + window.location.port : "");}
-  
+
   ericXML = '<?xml version="1.0" encoding="UTF-8"?><user><created-at type="datetime">2007-04-08T15:12:06-04:00</created-at><id type="integer">1</id><first-name>eric</first-name><admin type="boolean">true</admin></user>'
   camelCaseXML = '<?xml version="1.0" encoding="UTF-8"?><cool-thing><created-at type="datetime">2007-04-08T15:12:06-04:00</created-at><id type="integer">1</id><first-name>eric</first-name><admin type="boolean">true</admin></cool-thing>'
   ericJSON = '{attributes: {id: "1", first_name: "eric", admin: "1", created_at: "2007-04-08 15:12:06"}}'
@@ -32,7 +32,7 @@ function setUp () {
     'first-name' : 'eric',
     'admin' : { '@type' : 'boolean', '#text' : 'true' },
     'created_at' : { '@type' : 'datetime', '#text' : '2007-04-08T15:12:06-04:00' },
-    'posts' : { 
+    'posts' : {
       'post' : [postDetails1, postDetails2]
     }
   }
@@ -41,7 +41,7 @@ function setUp () {
     'first-name' : 'john',
     'admin' : { '@type' : 'boolean', '#text' : 'false' },
     'created_at' : { '@type' : 'datetime', '#text' : '2007-04-09T15:12:06-04:00' },
-    'posts' : { 
+    'posts' : {
       'post' : postDetails3
     }
   }
@@ -51,19 +51,19 @@ function setUp () {
     'admin' : { '@type' : 'boolean', '#text' : 'true' },
     'created_at' : { '@type' : 'datetime', '#text' : '2007-04-10T15:12:06-04:00' }
   }
-  
+
   allUsersDetails = {
     'users' : {
       'user' : [ericDetails, johnDetails, chadDetails]
     }
   }
-  
+
   allPostsDetails = {
     'posts' : {
       'post' : [postDetails1, postDetails2, postDetails3]
     }
   }
-  
+
   // Chad with ID 1, for testing remote site support
   remoteChad = {
     'id' : { '@type' : 'integer', '#text' : '1' },
@@ -71,29 +71,29 @@ function setUp () {
     'admin' : { '@type' : 'boolean', '#text' : 'true' },
     'created_at' : { '@type' : 'datetime', '#text' : '2007-04-10T15:12:06-04:00' }
   }
-  
+
   // test for belongs_to, separate from normal universe
-  postIncludeDetails = { 
+  postIncludeDetails = {
     'id' : { '@type' : 'integer', '#text' : '3' },
-    'title' : 'another title', 
+    'title' : 'another title',
     'body' : 'another body',
     'user' : ericDetails
   }
-  
+
   // test for finding all, but where ObjTree doesn't use an array because there is only one result
   allWithOneUserDetails = {
     'users' : {
       'user' : ericDetails
     }
   }
-  
+
   newUserDetails = {
     'first-name' : undefined,
     'admin' : { '@type' : 'boolean', '#text' : 'false' },
     'created_at' : { '@type' : 'datetime' }
   }
   newUserJSON = '{attributes: {first_name: null, admin: null, created_at: null}}'
-  
+
   Resource.requestAndParse = function (format, callback, url, options, user_callback, remote) {
     if (remote && format == "json") {
       jesterCallback = function(json){
@@ -106,15 +106,15 @@ function setUp () {
       eval('var result = ' + Internet[url]);
       return result;
     }
-  
+
     var result = Internet[url];
 
     if (format == "json")
       eval('result = ' + result);
-      
+
     if (callback)
       result = callback(result);
-      
+
     if (user_callback) {
       changed = true;
       if (typeof(user_callback) == "function")
@@ -125,42 +125,42 @@ function setUp () {
           result = user_callback(result);
       }
     }
-    
+
     return result;
   }
-  
+
   // JSON callback
   jesterCallback = null;
-  
+
   // mock out the Internet
   Internet = {}
-  
+
   // Remote models
   Resource.model("User", {prefix: "http://www.thoughtbot.com", format: "json"})
   Resource.model("Post", {prefix: "http://www.thoughtbot.com", format: "json"})
-  
+
   Internet[User._show_url(1)] = "jesterCallback(" + ericJSON + ");";
   Internet[Post._show_url(1)] = "jesterCallback(" + postJSON + ");";
   Internet[User._list_url()] = "jesterCallback(" + usersJSON + ");";
-  
+
   // JSON models
   Resource.model("User", {format: "json"})
   Resource.model("Post", {format: "json"})
-  
+
   Internet[User._show_url(1)] = ericJSON;
   Internet[Post._show_url(1)] = postJSON;
   Internet[User._list_url()] = usersJSON;
   Internet[User._new_url()] = newUserJSON;
-  
+
   // Path prefixed models
   Resource.model("Post", {prefix: "/users/:user_id"})
-  
+
   Internet[Post._show_url({id: 1, user_id: 1})] = {'post': postDetails1};
-  
+
   // XML models
   Resource.model("User")
   Resource.model("Post")
-  
+
   Internet[User._show_url(1)] = {'user': ericDetails};
   Internet[User._show_url(2)] = {'user': johnDetails};
   Internet[User._show_url(3)] = {'user': chadDetails};
@@ -178,7 +178,7 @@ function setUp () {
   // used to make sure callbacks get called
   changed = false;
   assert_changed = function() {assert(changed); changed = false;}
-  
+
   return true;
 }
 
@@ -189,7 +189,7 @@ function setUp () {
 
 function testFind() {
   var eric = User.find(1);
-  
+
   assertEquals("Attributes should be filled in correctly on find().", 'eric', eric.first_name);
   assert("Boolean attributes should be auto-transformed (when format is XML).", eric.admin);
   assertEquals("Date attributes should be auto-transformed (when format is XML).", Date, eric.created_at.constructor);
@@ -201,59 +201,59 @@ function testFind() {
   assertEquals("Eric's post's body wasn't loaded.", 'the body', eric.posts[0].body);
   assertEquals("Eric's second post's title wasn't loaded.", 'another title', eric.posts[1].title);
   assertEquals("Eric's second post's body wasn't loaded.", 'another body', eric.posts[1].body);
-  
+
   // failed find
   var eric = User.find(50);
   assert(eric == null);
-  
+
   // with params
   var ericLite = User.find(1, {lite: true});
   assertEquals("eric", ericLite.first_name);
   assertEquals(1, ericLite.id); // make sure ID gets autoset
   assertEquals(2, ericLite._properties.length);
   assert(typeof(ericLite.admin) == "undefined");
-  
+
   // test function form of callback
   User.find(1, {}, function(eric) {
     assertEquals('eric', eric.first_name);
     assert_changed();
   });
-  
+
   // test options form of callback
   User.find(1, {}, {on200: function(eric) {
     assertEquals('eric', eric.first_name);
     assert_changed();
   }});
-  
+
   // test onComplete is preserved
   User.find(1, {}, {onComplete: function(eric) {
     assertEquals('eric', eric.first_name);
     assert_changed();
   }});
-  
+
   // test that I can use options form but force it to be synchronous anyway
   var eric = User.find(1, {}, {asynchronous: false});
   assertEquals('eric', eric.first_name);
-  
+
   // test that I can omit the params hash completely if I pass a straight callback
   User.find(1, function(eric) {
     assertEquals('eric', eric.first_name);
     assert_changed();
   });
-  
+
   // test path prefixed find
   Resource.model("Post", {prefix: "/users/:user_id"})
   var post = Post.find(1, {user_id: 1})
   assertEquals(1, post.id)
   assertEquals("the body", post.body)
-  
+
   // test JSON find
   Resource.model("User", {format: "json"})
   var eric = User.find(1);
   assertEquals("Eric wasn't found through JSON find(1).", 'eric', eric.first_name);
   assertEquals("ID didn't get transformed using JSON.", 1, eric.id);
   assertEquals("1", eric.admin.toString());
-  
+
   // test Remote find
   Resource.model("User", {prefix: "http://www.thoughtbot.com", format: "json"})
   var eric;
@@ -264,10 +264,10 @@ function testFind() {
   });
 }
 
-function testFindAll() {  
+function testFindAll() {
   var users = User.find('all');
   assertEquals(3, users.length);
-  
+
   var eric = User.find(1);
   for (var i =0; i<eric._properties.length; i++)
     assertEquals(eric._properties[i], users[0]._properties[i]);
@@ -275,30 +275,30 @@ function testFindAll() {
   assertEquals(eric.constructor, users[0].constructor);
   for (var i=0; i<3; i++)
     assertEquals(i+1, users[i].id)
-  
+
   User.find('all', {}, function(users) {
     assertEquals(3, users.length);
     assertEquals(eric.constructor, users[0].constructor);
     assert_changed();
   });
-  
+
   // test that there's no issue with one element arrays in XML
   Internet[User._list_url()] = allWithOneUserDetails;
   var users = User.find("all");
   assertEquals(1, users.length);
-  
+
   // with params
   var admins = User.find("all", {admin: true})
   assertEquals(2, admins.length);
   assertEquals("eric", admins[0].first_name);
   assertEquals("chad", admins[1].first_name);
-  
+
   // JSON find all
   Resource.model("User", {format: "json"})
   var users = User.find('all');
   assertEquals("Found eric as first user in JSON :all", "eric", users[0].first_name)
   assertEquals("Found john as second user in JSON :all", "john", users[1].first_name)
-  
+
   // Remote find all
   var users;
   User.find('all', {}, function(users) {
@@ -312,16 +312,16 @@ function testFindAll() {
 function testFindFirst() {
   var eric = User.find('first');
   var eric2 = User.find(1);
-  
+
   assertEquals(eric.first_name, eric2.first_name);
   assertEquals(eric.constructor, eric2.constructor);
-  
+
   User.find('first', {}, function(eric) {
     assertEquals(eric.first_name, eric2.first_name);
     assertEquals(eric.constructor, eric2.constructor);
     assert_changed();
   });
-  
+
   // with params
   var admin = User.find("first", {admin: true})
   assertEquals("eric", admin.first_name);
@@ -330,16 +330,16 @@ function testFindFirst() {
 // reload is a find operation
 function testReload() {
   var eric = User.find(1)
-  
+
   // fake that the user details got updated
   Internet[User._show_url(1)] = {'user': johnDetails}
-  
+
   eric.reload();
   assertEquals("john", eric.first_name)
-  
+
   // switch back
   Internet[User._show_url(2)] = {'user': ericDetails}
-  
+
   eric.reload(function(ignoreMe) {
     assertEquals("eric", eric.first_name)
     assert_changed();
@@ -357,10 +357,10 @@ function testAssociations() {
   assertEquals("posts", eric._associations[0]);
   assertEquals(Post, eric.posts[0].klass);
   assertEquals(2, eric.posts.length);
-  
+
   var john = User.find(2);
   assertEquals(1, john.posts.length);
-  
+
   // auto-model associations if need be
   var original_url = Post._show_url();
   Post = undefined;
@@ -371,7 +371,7 @@ function testAssociations() {
   assertEquals("post", Post._singular);
   assertEquals(User._format, Post._format);
   assertEquals(User._prefix, Post._prefix);
-  
+
   // belongs_to/has_one
   Resource.model("Post");
   Internet[Post._show_url(1)] = {'post': postIncludeDetails};
@@ -379,7 +379,7 @@ function testAssociations() {
   assertEquals(1, post._associations.length);
   assertEquals("user", post._associations[0]);
   assertEquals(User, post.user.klass)
-  
+
   // auto-model belongs_to/has_one
   var original_url = User._show_url();
   User = undefined;
@@ -399,7 +399,7 @@ function testAssociations() {
 
 function testValidCheck() {
   var user = User.build();
-  
+
   assert(user.valid());
   user.errors[0] = 'error';
   assert(! user.valid());
@@ -411,7 +411,7 @@ function testInvalidSave() {
   assert(user.new_record());
 
   Ajax = { Request : function (url, options) {
-    this.transport = { 
+    this.transport = {
       status : 200,
       responseText : "<errors><error>First name can't be blank</error></errors>"
     };
@@ -427,7 +427,7 @@ function testInvalidSave() {
   assert(! user.new_record());
 
   Ajax = { Request : function (url, options) {
-    this.transport = { 
+    this.transport = {
       status : 200,
       responseText : "<errors><error>First name can't be blank</error></errors>"
     };
@@ -447,15 +447,15 @@ function testInvalidSave() {
 
 function testDestroy() {
   var eric = User.build({id: 1})
-  Ajax = { Request : function (url, options) { 
+  Ajax = { Request : function (url, options) {
       this.transport = { status : 500 };
     }
   }
   assert(!eric.destroy());
   assertEquals(1, eric.id);
-  
+
   var eric = User.build({id: 1})
-  Ajax = { Request : function (url, options) { 
+  Ajax = { Request : function (url, options) {
       this.transport = { status : 200 };
     }
   }
@@ -467,7 +467,25 @@ function testDestroy() {
     assertEquals(eric, eric.destroy());
     assertNull(eric.id);
     assert_changed();
-  });  
+  });
+
+  // Path prefixed destroy
+  Resource.model("Post", {prefix: "/users/:user_id"});
+
+  var eric = User.build({id: 1})
+  var post = Post.build({id: 3, user: eric});
+  var uriRegEx = RegExp("/users/1/posts/3");
+  Ajax = { Request : function (url, options) {
+      assert("URL passed ("+url+") does not match expected path: "+uriRegEx, 
+             uriRegEx.test(url));
+      this.transport = { status: 200 };
+    }
+  }
+
+  Post.destroy({id: 3, user_id: 1});
+
+  assertEquals(post, post.destroy());
+  assertNull(post.id);
 }
 
 function testSaveNewRecord() {
@@ -484,7 +502,7 @@ function testSaveNewRecord() {
   assert(eric.save());
   assertEquals(1, eric.id);
   assertEquals(1, eric.attributes().id);
-  
+
   var eric = User.build({ 'first_name' : 'eric' });
   eric.save(function(saved) {
     assert(saved);
@@ -502,7 +520,7 @@ function testSaveExistingRecord() {
   }};
 
   assert(eric.save());
-  
+
   eric.save(function(saved) {
     assert(saved);
     assert_changed();
@@ -512,7 +530,7 @@ function testSaveExistingRecord() {
 function testSaveReloadsUponFullResponse() {
   // new record
   var john = User.build({'first_name' : 'john' });
-  
+
   Ajax = { Request : function (url, options) {
     this.transport = {
       status: 201,
@@ -520,24 +538,24 @@ function testSaveReloadsUponFullResponse() {
       responseText : ericXML
     }
   }};
-  
+
   john.save();
-  
+
   assertEquals(1, john.id);
   assertEquals("eric", john.first_name)
-  
+
   // existing record
   var john = User.build({'first_name' : 'john', 'id' : 2});
-  
+
   Ajax = { Request : function (url, options) {
     this.transport = {
       status: 200,
       responseText : ericXML
     }
   }};
-  
+
   john.save();
-  
+
   assertEquals("eric", john.first_name);
   assertEquals(1, john.id); // if the server changes the ID, so be it
 }
@@ -552,12 +570,12 @@ function testBuild() {
   Resource.model('User', {checkNew: true});
   var eric = User.build();
   assertEquals(3, eric._properties.length);
-  
+
   // test with checking new.json
   Resource.model('User', {checkNew: true, format: 'json'});
   var eric = User.build();
   assertEquals(3, eric._properties.length);
-  
+
   // test that specific attributes will override what new returns
   var eric = User.build({first_name: "eric", admin: true, daisies: 5});
   assertEquals(4, eric._properties.length);
@@ -599,7 +617,7 @@ function testUpdateAttributes() {
 /********************************************
  ************* PARSING TESTS ****************
  ********************************************/
- 
+
 function testAttributesFromJSON() {
   eval('var json = ' + ericJSON);
   var attributes = User._attributesFromJSON(json);
@@ -607,12 +625,12 @@ function testAttributesFromJSON() {
   assertEquals("1", attributes.admin.toString()); // toString() since "1" == true
   assertEquals("eric", attributes.first_name);
   assertEquals(Date, attributes.created_at.constructor)
-  
+
   // test that the surrounding attributes hash is optional
   var attributes = User._attributesFromJSON({email: "emill@thoughtbot.com", id: "1"});
   assertEquals("emill@thoughtbot.com", attributes.email);
   assertEquals(1, attributes.id);
-  
+
   assertEquals(false, User._attributesFromJSON({}));
   assertEquals(false, User._attributesFromJSON([]));
   assertEquals(false, User._attributesFromJSON(null));
@@ -630,11 +648,11 @@ function testErrorsFromJSON() {
   Resource.model('User', {format: 'json'});
   var eric = User.build();
   var errors = eric._errorsFrom(errorJSON);
-  
+
   assertEquals(2, errors.length);
   assertEquals("Name can't be blank", errors[0]);
   assertEquals("City can't be blank", errors[1]);
-  
+
   assertEquals(false, eric._errorsFrom(' '));
   assertEquals(false, eric._errorsFrom(''));
   assertEquals(false, eric._errorsFrom(null));
@@ -644,11 +662,11 @@ function testErrorsFromXML() {
   var errorXML = "<errors><error>Name can't be blank</error><error>City can't be blank</error></errors>"
   var eric = new User();
   var errors = eric._errorsFromXML(errorXML);
-  
+
   assertEquals(2, errors.length);
   assertEquals("Name can't be blank", errors[0]);
   assertEquals("City can't be blank", errors[1]);
-  
+
   assertEquals(false, eric._errorsFromXML(' '));
   assertEquals(false, eric._errorsFromXML(''));
   assertEquals(false, eric._errorsFromXML(null));
@@ -657,7 +675,7 @@ function testErrorsFromXML() {
 /********************************************
  ************ INTERNAL TESTS ****************
  ********************************************/
- 
+
  function testGlobalScope() {
   // IE7 compatibility
   assertEquals("IE7 incompatibility", User, window.User);
@@ -689,7 +707,7 @@ function testNameAccessors() {
   assertEquals('user', User._singular);
   assertEquals('users', User._plural);
   assertEquals(default_prefix(), User._prefix);
-  
+
   Resource.model("OrderLineItem");
   assertEquals('OrderLineItem', OrderLineItem._name);
   assertEquals('order_line_item', OrderLineItem._singular);
@@ -698,7 +716,7 @@ function testNameAccessors() {
   assertEquals('order-line-items', OrderLineItem._plural_xml);
   assertEquals(default_prefix(), OrderLineItem._prefix);
 }
-      
+
 function testPrefix() {
   Resource.model('User', {prefix: 'http://www.thoughtbot.com'});
   assertEquals("Absolute prefix.", 'http://www.thoughtbot.com', User._prefix);
@@ -715,7 +733,7 @@ function testPluralization() {
   Resource.model('Person');
   assertEquals('person', Person._singular);
   assertEquals('people', Person._plural);
-  
+
   // singular override
   Resource.model('Person', {singular: 'user'})
   assertEquals('user', Person._singular);
@@ -730,23 +748,23 @@ function testPluralization() {
 function testLocationUrls() {
   Resource.model('User', {prefix: 'http://www.thoughtbot.com'});
   var eric = User.build({id: 1})
-  
+
   assertEquals('http://www.thoughtbot.com/users/1.xml', eric._show_url());
   assertEquals('http://www.thoughtbot.com/users/2.xml', User._show_url(2));
   assertEquals('http://www.thoughtbot.com/users/2.xml', User._show_url({id: 2}));
   assertEquals('http://www.thoughtbot.com/users/1.xml?lite=true', User._show_url({id: 1, lite: true}))
   assertEquals('http://www.thoughtbot.com/users/1.xml?lite=true', eric._show_url({lite: true}))
-  
+
   assertEquals('http://www.thoughtbot.com/users.xml', User._list_url());
   assertEquals('http://www.thoughtbot.com/users.xml', User._list_url({}));
   assertEquals('http://www.thoughtbot.com/users.xml?admin=true&name=eric&lasers=5', User._list_url({admin: true, name: "eric", lasers: 5}));
-  
+
   assertEquals('http://www.thoughtbot.com/users/new.xml', User._new_url());
   assertEquals('http://www.thoughtbot.com/users/new.xml?lite=true', User._new_url({lite: true}));
-  
+
   Resource.model('Post', {prefix: 'http://www.thoughtbot.com/users/:user_id'});
   var post = Post.build({id: 1})
-  
+
   assertEquals('http://www.thoughtbot.com/users/1/posts/1.xml', post._show_url({user_id: 1}));
   assertEquals('http://www.thoughtbot.com/users/1/posts/2.xml', Post._show_url({id: 2, user_id: 1}));
   assertEquals('http://www.thoughtbot.com/users/2/posts.xml', Post._list_url({user_id: 2}));
@@ -758,7 +776,7 @@ function testLocationUrls() {
 function testNewRecordCheck() {
   var eric = User.build();
   assert(eric.new_record());
-  
+
   eric.id = 1;
   assert(! eric.new_record());
 }
