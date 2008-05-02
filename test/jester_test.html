@@ -446,7 +446,7 @@ function testInvalidSave() {
  ********************************************/
 
 function testDestroy() {
-  var eric = User.build({id: 1})
+  /*var eric = User.build({id: 1})
   Ajax = { Request : function (url, options) {
       this.transport = { status : 500 };
     }
@@ -467,16 +467,15 @@ function testDestroy() {
     assertEquals(eric, eric.destroy());
     assertNull(eric.id);
     assert_changed();
-  });
+  });*/
 
   // Path prefixed destroy
   Resource.model("Post", {prefix: "/users/:user_id"});
 
-  var eric = User.build({id: 1})
-  var post = Post.build({id: 3, user: eric});
+  var post = Post.build({id: 3, user_id: 1});
   var uriRegEx = RegExp("/users/1/posts/3");
   Ajax = { Request : function (url, options) {
-      assert("URL passed ("+url+") does not match expected path: "+uriRegEx, 
+      assert("URL passed ("+url+") does not match expected path: "+uriRegEx,
              uriRegEx.test(url));
       this.transport = { status: 200 };
     }

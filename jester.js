@@ -490,19 +490,40 @@ Object.extend(Jester.Resource.prototype, {
       return this;
   },
 
-  // If not given an ID, destroys itself, if it has an ID.  If given an ID, destroys that record.
-  // You can call destroy(), destroy(1), destroy(callback()), or destroy(1, callback()), and it works as you expect.
-  destroy : function(given_id, callback) {
-    if (typeof(given_id) == "function") {
-      callback = given_id;
-      given_id = null;
+  // Destroys a REST object.  Can be used as follows:
+  // object.destroy() - when called on an instance of a model, destroys that instance
+  // Model.destroy(1) - destroys the Model object with ID 1
+  // Model.destroy({parent: 3, id: 1}) - destroys the Model object with Parent ID 3 and ID 1
+  //
+  // Any of these forms can also be passed a callback function as an additional parameter and it works as you expect.
+  destroy : function(params, callback) {
+    if (params === undefined) {
+        params = {};
     }
-    var id = given_id || this.id;
-    if (!id) return false;
+    if (typeof(params) == "function") {
+      callback = params;
+      params = {};
+    }
+    if (typeof(params) == "number") {
+      params = {id: params};
+    }
+    if (!params.id) {
+        params.id = this.id;
+    }
+    if (!params.id) return false;
+
+    // collect params from instance if we're being called as an instance method
+    if (this._properties !== undefined) {
+      (this._properties).each( bind(this, function(value, i) {
+        if (params[value] === undefined) {
+          params[value] = this[value];
+        }
+      }));
+    }
 
     var destroyWork = bind(this, function(transport) {
       if (transport.status == 200) {
-        if (!given_id || this.id == given_id)
+        if (!params.id || this.id == params.id)
           this.id = null;
         return this;
       }
@@ -510,7 +531,7 @@ Object.extend(Jester.Resource.prototype, {
         return false;
     });
 
-    return this.klass.request(destroyWork, this._destroy_url(), {method: "delete"}, callback);
+    return this.klass.request(destroyWork, this._destroy_url(params), {method: "delete"}, callback);
   },
 
   save : function(callback) {
