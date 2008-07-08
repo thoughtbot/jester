@@ -587,7 +587,7 @@ function testSetAttributes() {
   var eric = User.find(1);
   newAttrs = {
     'first_name' : 'todd',
-    'admin' : false,
+    'admin' : false
   }
   oldAttrs = eric.attributes();
   eric.setAttributes(newAttrs);
@@ -602,7 +602,7 @@ function testUpdateAttributes() {
   var eric = User.find(1);
   newAttrs = {
     'first_name' : 'todd',
-    'admin' : false,
+    'admin' : false
   }
   oldAttrs = eric.attributes();
   eric.updateAttributes(newAttrs);
