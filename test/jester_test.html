@@ -549,6 +549,10 @@ function testSaveWithExtraParams() {
     assert(saved);
     assert_changed();
   });
+
+  Resource.model("User", {defaultParams: {extraOption: "blah"}});
+  var eric = User.build({ 'id' : '1', 'first_name' : 'eric' });
+  assert(eric.save());
 }
 
 function testSaveReloadsUponFullResponse() {
