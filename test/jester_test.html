@@ -262,6 +262,14 @@ function testFind() {
     assertEquals("1", eric.admin.toString());
     assert_changed();
   });
+
+  // with default params
+  Resource.model("User", {defaultParams: {lite: true}});
+  ericLite = User.find(1);
+  assertEquals("eric", ericLite.first_name);
+  assertEquals(1, ericLite.id); // make sure ID gets autoset
+  assertEquals(2, ericLite._properties.length);
+  assert(typeof(ericLite.admin) == "undefined");
 }
 
 function testFindAll() {
@@ -521,6 +529,23 @@ function testSaveExistingRecord() {
   assert(eric.save());
 
   eric.save(function(saved) {
+    assert(saved);
+    assert_changed();
+  });
+}
+
+function testSaveWithExtraParams() {
+  var eric = User.build({ 'id' : '1', 'first_name' : 'eric' });
+  assert(! eric.new_record());
+
+  Ajax = { Request : function (url, options) {
+    assert(url.include("extraOption=blah"));
+    this.transport = { status : 200 };
+  }};
+
+  assert(eric.save({extraOption: "blah"}));
+
+  eric.save({extraOption: "blah"}, function(saved) {
     assert(saved);
     assert_changed();
   });
