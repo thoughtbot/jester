@@ -39,7 +39,8 @@ Object.extend(Jester.Resource, {
     var default_options = {
       format:   "xml",
       singular: model.underscore(),
-      name:     model
+      name:     model,
+      defaultParams: {}
     }
     options              = Object.extend(default_options, options);
     options.format       = options.format.toLowerCase();
@@ -223,7 +224,13 @@ Object.extend(Jester.Resource, {
     return new this(attributes);
   },
 
-  create : function(attributes, callback) {
+  create : function(attributes, params, callback) {
+    // allow a params hash to be omitted and a callback function given directly
+    if (!callback && typeof(params) == "function") {
+      callback = params;
+      params = null;
+    }
+
     var base = new this(attributes);
 
     createWork = bind(this, function(saved) {
@@ -289,6 +296,8 @@ Object.extend(Jester.Resource, {
     if (typeof(params) == "number") params = {id: params}
 
     if (params) params = $H(params);
+
+    params = Object.extend(Object.clone(this._defaultParams), params);
 
     var url = this._interpolate(this._prefix + this._urls[action], params)
     return url + (params && params.any() ? "?" + params.toQueryString() : "");
@@ -534,7 +543,13 @@ Object.extend(Jester.Resource.prototype, {
     return this.klass.request(destroyWork, this._destroy_url(params), {method: "delete"}, callback);
   },
 
-  save : function(callback) {
+  save : function(params, callback) {
+    // allow a params hash to be omitted and a callback function given directly
+    if (!callback && typeof(params) == "function") {
+      callback = params;
+      params = null;
+    }
+
     var saveWork = bind(this, function(transport) {
       var saved = false;
 
@@ -577,10 +592,13 @@ Object.extend(Jester.Resource.prototype, {
     var method = null;
 
     // collect params
-    var params = {};
-    var urlParams = {};
+    var objParams = {};
+    var urlParams = Object.clone(this.klass._defaultParams);
+    if (params) {
+      Object.extend(urlParams, params);
+    }
     (this._properties).each( bind(this, function(value, i) {
-      params[this.klass._singular + "[" + value + "]"] = this[value];
+      objParams[this.klass._singular + "[" + value + "]"] = this[value];
       urlParams[value] = this[value];
     }));
 
@@ -594,9 +612,8 @@ Object.extend(Jester.Resource.prototype, {
       method = "put";
     }
 
-
     // send the request
-    return this.klass.request(saveWork, url, {parameters: params, method: method}, callback);
+    return this.klass.request(saveWork, url, {parameters: objParams, method: method}, callback);
   },
 
   setAttributes : function(attributes)
