@@ -295,9 +295,9 @@ Object.extend(Jester.Resource, {
     // if an integer is sent, it's assumed just the ID is a parameter
     if (typeof(params) == "number") params = {id: params}
 
-    if (params) params = $H(params);
-
     params = Object.extend(Object.clone(this._defaultParams), params);
+
+    if (params) params = $H(params);
 
     var url = this._interpolate(this._prefix + this._urls[action], params)
     return url + (params && params.any() ? "?" + params.toQueryString() : "");
