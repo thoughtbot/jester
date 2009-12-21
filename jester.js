@@ -26,8 +26,8 @@ Object.extend(Jester.Resource, {
   {
     var new_model = null;
     new_model = eval(model + " = " + Jester.Constructor(model));
-    new_model.prototype = new Jester.Resource();
     Object.extend(new_model, Jester.Resource);
+    new_model.prototype = new Jester.Resource();
 
     // We delay instantiating XML.ObjTree() so that it can be listed at the end of this file instead of the beginning
     if (!Jester.Tree) {
