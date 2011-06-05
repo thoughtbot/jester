@@ -3,7 +3,7 @@ Jester
 
 Jester is our implementation of REST, in JavaScript. It provides (nearly) identical syntax to ActiveResource for using REST to find, update, and create data, but from the client side.
 
-It depends on [Prototype](http://prototypejs.org) and [ObjTree](http://www.kawa.net/works/js/xml/objtree-e.html).
+It depends on [Prototype](http://prototypejs.org).
 
 Syntax
 ------
@@ -156,10 +156,9 @@ Lastly, associations are also supported. If the association data is included in 
 Using Jester
 ------------
 
-Jester depends on two libraries: Prototype, which comes with Rails and most people are familiar with, and ObjTree, a nice DOM parsing engine for JavaScript. Both of these are packaged along with Jester in this repository, so you don't have to hunt for them yourself. Just make sure you're including all three in your test file.
+Jester depends on Prototype, which comes with Rails versions 3.0.x and lower. It includes portions of [ObjTree](http://www.kawa.net/works/js/xml/objtree-e.html), a nice DOM parsing engine for JavaScript.
 
     <script type="text/javascript" src="/javascripts/prototype.js"></script>
-    <script type="text/javascript" src="/javascripts/ObjTree.js"></script>
     <script type="text/javascript" src="/javascripts/jester.js"></script>
 
 JavaScript in the browser is limited to requests with in only the same domain as the script is running in, so without iframe hackery, Jester is probably only useful for writing client code in your own apps, to talk to itself. We're investigating whether Jester can use this hackery to make cross-domain requests, but it's not clear if this will be feasible.
