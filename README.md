@@ -254,7 +254,9 @@ This allows you to pass extra JSON information along with any data returned from
 Credits
 -------
 
-Thank you to all [the contributors](https://github.com/thoughtbot/jester/contributors).
+Thanks go to Eric Mill for writing Jester, Chad Pytel for the original idea, Jared Pytel for writing Jester's tests, and Floyd Wright for adding the updateAttributes and setAttributes methods.
+
+Thanks to all [the additional contributors](https://github.com/thoughtbot/jester/contributors).
 
 License
 -------
