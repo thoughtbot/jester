@@ -5,6 +5,12 @@ Jester is our implementation of REST, in JavaScript. It provides (nearly) identi
 
 It depends on [Prototype](http://prototypejs.org).
 
+DEPRECATED
+----------
+
+We no longer use or support this. If you wish to take this project over please
+email <support@thoughtbot.com>.
+
 Syntax
 ------
 
